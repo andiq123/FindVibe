@@ -1,26 +1,26 @@
 import {
   Component,
-  effect,
   computed,
   signal,
   OnInit,
   inject,
   ChangeDetectionStrategy,
 } from "@angular/core";
-import { HttpClient } from "@angular/common/http";
-import { environment } from "../../../environments/environment";
 import { RouterLink } from "@angular/router";
 import { FaIconComponent } from "@fortawesome/angular-fontawesome";
 import { PageContentComponent } from "../../shared/components/page-content/page-content.component";
 import { EmptyStateComponent } from "../../shared/empty-state/empty-state.component";
 import { SearchBarComponent } from "../search/search-bar/search-bar.component";
+import { PlaylistService } from "../../core/services/playlist.service";
+import { PlayerStatus } from "../player/models/player.model";
+import { PlayerButtonComponent } from "../../shared/player-button/player-button.component";
 import { PlayerService } from "../../core/services/player.service";
 import { RadioService } from "../../core/services/radio.service";
 import { StorageService } from "../../core/services/storage.service";
 import { ToastService } from "../../core/services/toast.service";
 import { LibraryService } from "../library/services/library.service";
 import { ExploreService, ExploreSection } from "./explore.service";
-import { Song, songKey } from "../../core/models/song.model";
+import { Song, songKey, sameSong, sourceHost } from "../../core/models/song.model";
 import {
   faArrowRotateRight,
   faCompass,
@@ -33,6 +33,7 @@ import {
   standalone: true,
   imports: [
     PageContentComponent,
+    PlayerButtonComponent,
     SearchBarComponent,
     FaIconComponent,
     EmptyStateComponent,
@@ -43,14 +44,24 @@ import {
 })
 export class ExplorePageComponent implements OnInit {
   readonly explore = inject(ExploreService);
-  private readonly http = inject(HttpClient);
-  readonly featuredImage = signal("");
-  readonly featuredSong = computed(() => {
-    const songs = this.explore.sections()[0]?.songs ?? [];
-    return songs.find((song) => song.image?.trim() && !song.image.includes("no_album_art")) ?? songs[0];
+  private readonly pinnedPicks = signal<{ section: ExploreSection; song: Song }[]>([]);
+  readonly featuredPicks = computed(() => {
+    const pinned = this.pinnedPicks();
+    if (pinned.some(pick => sameSong(this.playlist.currentSong(), pick.song))) return pinned;
+    const used = new Set<string>();
+    return this.explore.sections().flatMap(section => {
+      const available = section.songs.filter(s => !used.has(songKey(s)));
+      const song = available.find(s => s.image?.trim() && !s.image.includes("no_album_art")) ?? available[0];
+      if (!song || used.size >= 3) return [];
+      used.add(songKey(song));
+      return [{ section, song }];
+    });
   });
   readonly radio = inject(RadioService);
   private readonly player = inject(PlayerService);
+  private readonly playlist = inject(PlaylistService);
+  readonly playerStatus = PlayerStatus;
+  readonly providerLabel = sourceHost;
   private readonly library = inject(LibraryService);
   private readonly storage = inject(StorageService);
   private readonly toast = inject(ToastService);
@@ -60,22 +71,6 @@ export class ExplorePageComponent implements OnInit {
   readonly faTriangleExclamation = faTriangleExclamation;
   readonly faWaveSquare = faWaveSquare;
   readonly skeletons = [0, 1, 2];
-
-  constructor() {
-    effect((onCleanup) => {
-      const song = this.featuredSong();
-      this.featuredImage.set("");
-      if (!song) return;
-      // Enrich only the prominent cover; never delay discovery or fan out per card.
-      const sub = this.http.get<{ image?: string }>(`${environment.API_URL}/cover`, {
-        params: { q: `${song.artist} ${song.title}` },
-      }).subscribe({
-        next: (result) => this.featuredImage.set(result.image || ""),
-        error: () => { /* Retain provider art when enrichment is unavailable. */ },
-      });
-      onCleanup(() => sub.unsubscribe());
-    });
-  }
 
   ngOnInit(): void {
     void this.explore.load();
@@ -87,17 +82,36 @@ export class ExplorePageComponent implements OnInit {
   }
 
   onRefresh(): void {
+    this.pinnedPicks.set([]);
     void this.explore.refresh();
   }
 
-  /** Shelf songs are already search-resolved — play the list as-is. */
+  statusFor(song: Song): PlayerStatus {
+    return sameSong(this.playlist.currentSong(), song) ? this.player.status() : PlayerStatus.Stopped;
+  }
+
+  actionLabel(song: Song): string {
+    const status = this.statusFor(song);
+    const action = status === PlayerStatus.Playing ? "Pause" : status === PlayerStatus.Loading ? "Loading" : status === PlayerStatus.Error ? "Retry" : "Play";
+    return `${action} ${song.title} by ${song.artist}`;
+  }
+
+  playQuickPick(section: ExploreSection, song: Song): void {
+    this.pinnedPicks.set(this.featuredPicks());
+    this.playFromShelf(section, song);
+  }
+
   playFromShelf(section: ExploreSection, song: Song): void {
+    if (sameSong(this.playlist.currentSong(), song)) {
+      if (this.player.status() === PlayerStatus.Playing) this.player.pause();
+      else if (this.player.status() !== PlayerStatus.Loading) void this.player.play();
+      return;
+    }
     void this.player.playFromList(section.songs, song);
   }
 
-  /** Because title seed — play that track alone. */
   playSeed(song: Song): void {
-    void this.player.playFromList([song], song);
+    this.playFromShelf({ id: "seed", title: "", subtitle: "", songs: [song] }, song);
   }
 
   radioBusy(section: ExploreSection): boolean {

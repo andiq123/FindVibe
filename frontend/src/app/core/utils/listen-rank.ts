@@ -99,17 +99,38 @@ export function pickVaultRadioSeed(
 
 /** Recent listening drives discovery; old heavy rotation decays over a week. */
 export function recommendationSeeds(recents: Song[], favorites: Song[], stats: ListenStats, now = Date.now()): Song[] {
-  const recentIndex = new Map(recents.map((s, i) => [songKey(s), i]));
+  const recentIndex = new Map<string, number>();
   const liked = new Set(favorites.map(songKey));
   const unique = new Map<string, Song>();
-  for (const s of [...recents, ...favorites]) if (!unique.has(songKey(s))) unique.set(songKey(s), s);
-  const score = (s: Song) => {
-    const index = recentIndex.get(songKey(s));
+  const combined = new Map<string, ListenStat>();
+  const seenLinks = new Set<string>();
+  for (const [i, s] of recents.entries()) {
+    const key = songKey(s);
+    if (key && !recentIndex.has(key)) recentIndex.set(key, i);
+  }
+  for (const s of [...recents, ...favorites]) {
+    const key = songKey(s);
+    if (!key) continue;
+    if (!unique.has(key)) unique.set(key, s);
     const stat = stats[s.link];
-    const age = Math.max(0, now - (stat?.lastAt ?? 0)) / DAY_MS;
-    return (index === undefined ? 0 : 6 / (1 + index / 3)) +
-      (liked.has(songKey(s)) ? 1 : 0) +
-      Math.log1p((stat?.plays ?? 0) + (stat?.ms ?? 0) / 180_000) * Math.pow(0.5, age / 7);
+    if (stat && !seenLinks.has(s.link)) {
+      const prev = combined.get(key);
+      combined.set(key, { ms: (prev?.ms ?? 0) + stat.ms, plays: (prev?.plays ?? 0) + stat.plays, lastAt: Math.max(prev?.lastAt ?? 0, stat.lastAt) });
+    }
+    seenLinks.add(s.link);
+  }
+  const score = (s: Song) => {
+    const key = songKey(s);
+    const index = recentIndex.get(key);
+    const stat = combined.get(key);
+    const age = stat ? Math.max(0, now - stat.lastAt) / DAY_MS : 0;
+    const decay = Math.pow(0.5, age / 7);
+    // A click is a weak signal; 30 seconds heard gives full recent-listen weight.
+    const confidence = stat ? Math.min(1, stat.ms / 30_000) : 0.5;
+    return (liked.has(key) ? 1.5 : 0) + decay * (
+      (index === undefined ? 0 : 6 * confidence / (1 + index / 3)) +
+      Math.log1p((stat?.ms ?? 0) / 180_000)
+    );
   };
   return [...unique.values()].sort((a, b) => score(b) - score(a));
 }

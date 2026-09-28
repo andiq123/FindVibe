@@ -25,14 +25,17 @@ function isTransient(err: unknown): boolean {
  */
 export const apiInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.startsWith(environment.API_URL)) return next(req);
+  // Version discovery requests so old HTTP/SW payloads cannot restore retired sources.
+  const isDiscovery = /\/(explore|recommend)(?:$|\?)/.test(req.url);
+  if (isDiscovery) req = req.clone({ setParams: { discovery: "2" } });
   const settings = inject(SettingsService);
   const isHealth = req.url.includes("/health");
   const isSlow =
-    req.url.includes("/lyrics") || req.url.includes("/recommend");
+    req.url.includes("/lyrics") || isDiscovery;
   // ponytail: mutations are not retried — a duplicated POST is worse than a failed one
   const retries = req.method === "GET" && !isHealth ? (isSlow ? 2 : 3) : 0;
   return next(req).pipe(
-    timeout(isSlow ? 22_000 : 15_000),
+    timeout(req.url.includes("/explore") ? 80_000 : req.url.includes("/recommend") ? 35_000 : isSlow ? 22_000 : 15_000),
     retry({
       count: retries,
       delay: (err, n) => {

@@ -9,6 +9,8 @@ import {
 } from "../../../core/models/song.model";
 import { environment } from "../../../../environments/environment";
 import { StorageService } from "../../../core/services/storage.service";
+import { directAudioEnabled } from "../../../core/utils/song-audio";
+import { artworkKey, fillSearchArtwork, missingArtwork } from "./search-artwork";
 import { readSearchStream } from "./search-stream";
 import { SettingsService } from "../../../core/services/settings.service";
 
@@ -36,6 +38,7 @@ export class SearchService {
   private readonly _suggestionsLoading = signal<boolean>(false);
   private suggestQuery = "";
   private activeSearch?: AbortController;
+  private artworkRequest?: AbortController;
   readonly searchWarning = signal("");
   private readonly _lastSearchQuery = signal<string>("");
   private readonly _pagination = signal<PaginationInfo | null>(null);
@@ -43,6 +46,7 @@ export class SearchService {
 
   constructor() {
     this.restoreState();
+    this.loadMissingArtwork();
   }
 
   readonly songs = this._songs.asReadonly();
@@ -69,9 +73,11 @@ export class SearchService {
       this._searchStatus() === SearchStatus.Finished &&
       this._songs().length > 0
     ) {
+      this.loadMissingArtwork();
       return of({ songs: this._songs(), pagination: this._pagination() });
     }
     return new Observable<SearchResponse>((subscriber) => {
+      this.artworkRequest?.abort();
       this.activeSearch?.abort();
       const controller = new AbortController();
       this.activeSearch = controller;
@@ -108,6 +114,7 @@ export class SearchService {
           this._searchStatus.set(SearchStatus.Finished);
           this.settingsService.setServerUp();
           this.saveState();
+          this.loadMissingArtwork();
         } catch {
           if (!isCurrent()) return;
           if (this._songs().length) {
@@ -173,6 +180,7 @@ export class SearchService {
   }
 
   resetSearch(): void {
+    this.artworkRequest?.abort();
     this.activeSearch?.abort();
     this.activeSearch = undefined;
     this.searchWarning.set("");
@@ -183,6 +191,19 @@ export class SearchService {
     this._pagination.set(null);
     this._currentPage.set(1);
     this.storageService.removeItem(SEARCH_STORAGE_KEY);
+  }
+
+  private loadMissingArtwork(): void {
+    this.artworkRequest?.abort();
+    const request = new AbortController();
+    this.artworkRequest = request;
+    void fillSearchArtwork(this._songs(), BASE_API_URL, request.signal, (key, image) => {
+      this._songs.update((songs) => songs.map((song) =>
+        missingArtwork(song) && artworkKey(song) === key ? { ...song, image } : song,
+      ));
+    }).then(() => {
+      if (!request.signal.aborted) this.saveState();
+    });
   }
 
   private saveState(): void {
@@ -197,7 +218,7 @@ export class SearchService {
 
   private restoreState(): void {
     const state = this.storageService.getItem<SearchState>(SEARCH_STORAGE_KEY);
-    if (!state) return;
+    if (!state || !state.songs?.every(directAudioEnabled)) return;
     this._songs.set(state.songs);
     this._searchStatus.set(state.status);
     this._lastSearchQuery.set(state.query);

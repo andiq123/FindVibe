@@ -69,7 +69,7 @@ func (h *RecommendHandler) GetStream(c fiber.Ctx) error {
 					return ""
 				}
 				host := u.Hostname()
-				for _, suffix := range []string{"mp3.pm", "musify.club", "mp3mn.net", "sunproxy.net"} {
+				for _, suffix := range []string{"kachevo.org", "hitmoz.com", "deliciousbananas.com", "deliciouspeaches.com"} {
 					if host == suffix || strings.HasSuffix(host, "."+suffix) {
 						return suffix
 					}
@@ -183,31 +183,16 @@ func streamProxyAllowed(u *url.URL) bool {
 	if host == "" || u.User != nil || (u.Port() != "" && u.Port() != "443") {
 		return false
 	}
-	if host == "mp3.pm" || strings.HasSuffix(host, ".mp3.pm") {
-		return true
+	allowedHost := host == "new.kachevo.org" || host == "eu.hitmoz.com"
+	// These are the providers' audio redirect hosts, not additional search sources.
+	for _, cdn := range []string{"deliciousbananas.com", "deliciouspeaches.com"} {
+		allowedHost = allowedHost || host == cdn || strings.HasSuffix(host, "."+cdn)
 	}
-	if host == "sunproxy.net" || strings.HasSuffix(host, ".sunproxy.net") {
-		return true
-	}
-	if host == "mp3mn.net" || strings.HasSuffix(host, ".mp3mn.net") {
-		return true
-	}
-	if host == "musify.club" || strings.HasSuffix(host, ".musify.club") {
-		return true
-	}
-	return false
+	return allowedHost && strings.HasPrefix(u.Path, "/get/music/")
 }
 
 func applyStreamUpstreamHeaders(req *http.Request, u *url.URL) {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
 	req.Header.Set("Accept", "*/*")
-	host := strings.ToLower(u.Hostname())
-	switch {
-	case strings.Contains(host, "sunproxy"), strings.Contains(host, "mp3mn"):
-		req.Header.Set("Referer", "https://mp3mn.net/")
-	case strings.Contains(host, "mp3.pm"):
-		req.Header.Set("Referer", "https://mp3.pm/")
-	case strings.Contains(host, "musify.club"):
-		req.Header.Set("Referer", "https://musify.club/")
-	}
+	req.Header.Set("Referer", "https://"+u.Hostname()+"/")
 }

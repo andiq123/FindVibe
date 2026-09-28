@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"github.com/andiq123/FindVibeFiber/internal/core/services/providers"
 	"io"
 	"net/http"
 	"strings"
@@ -12,8 +13,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-// Musify search HTML puts track rows after a large <head> (~75KB+). Read past that
-// so marker checks match the real scrape path (providers use up to 1MiB).
+// Read enough HTML to reach search rows after provider page assets.
 const healthBodyLimit = 512 << 10
 
 // Per-attempt budget. Cold TLS / first-hit challenge pages need more than a tight 8s,
@@ -27,7 +27,7 @@ type sourceSpec struct {
 	Referer string `json:"-"`
 	// Markers — OK if the body contains any one (search scrape path).
 	Markers [][]byte `json:"-"`
-	// Retries after a failed marker/blocked response (Musify often needs a warm cookie).
+	// Retries after a failed marker/blocked response.
 	Retries int `json:"-"`
 }
 
@@ -39,33 +39,8 @@ type sourceStatus struct {
 }
 
 var musicSources = []sourceSpec{
-	{
-		Name: "Mp3pm",
-		Host: "mp3.pm",
-		URL:  "https://mp3.pm/",
-		Markers: [][]byte{
-			[]byte(`cplayer-sound-item`),
-			[]byte(`data-sound-url`),
-		},
-		Retries: 1,
-	},
-	{
-		Name:    "Mp3mn",
-		Host:    "mp3mn.net",
-		URL:     "https://mp3mn.net/",
-		Markers: nil, // homepage reachability only
-	},
-	{
-		Name:    "Musify",
-		Host:    "musify.club",
-		URL:     "https://musify.club/en/search?searchText=nero&type=song",
-		Referer: "https://musify.club/en/",
-		Markers: [][]byte{
-			[]byte(`tracklist__row`),
-			[]byte(`/track/pl/`),
-		},
-		Retries: 1,
-	},
+	{Name: "MusicBoss", Host: "new.kachevo.org", URL: providers.MusicBossOrigin + "/search?q=cariceps", Markers: [][]byte{[]byte(`playlist-item-play`)}},
+	{Name: "Hitmos", Host: "eu.hitmoz.com", URL: providers.HitmosOrigin + "/search?q=cariceps", Markers: [][]byte{[]byte(`data-musmeta`)}},
 }
 
 type HealthHandler struct {

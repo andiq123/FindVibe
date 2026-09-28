@@ -6,6 +6,9 @@
     @case (playerStatus.Loading) {
       <span class="loading loading-spinner loading-xs"></span>
     }
+    @case (playerStatus.Error) {
+      <fa-icon [icon]="faArrowRotateRight" class="text-[0.95rem]" />
+    }
     @default {
       <fa-icon [icon]="faPlay" class="text-[0.95rem] translate-x-px" />
     }

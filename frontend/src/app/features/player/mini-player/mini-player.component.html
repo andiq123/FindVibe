@@ -72,8 +72,8 @@
         "
       />
       @if (status() === playerStatus.Error) {
-        <p class="text-xs text-error/90 truncate" role="status">
-          {{ playError() || "Couldn't play — tap play to retry" }}
+        <p class="text-xs text-error/90 truncate" role="status" [title]="playError()">
+          Unavailable · retry playback
         </p>
       } @else {
         <app-moving-title
@@ -111,7 +111,7 @@
         @if (status() === playerStatus.Loading) {
           <span class="loading loading-spinner loading-sm text-current"></span>
         } @else {
-          <fa-icon [icon]="status() === playerStatus.Playing ? faPause : faPlay" class="text-sm" />
+          <fa-icon [icon]="status() === playerStatus.Error ? faArrowRotateRight : status() === playerStatus.Playing ? faPause : faPlay" class="text-sm" />
         }
       </button>
       <button
@@ -124,7 +124,7 @@
       </button>
     </div>
     <button
-      class="btn btn-ghost btn-circle btn-sm transition-colors duration-200 shrink-0"
+      class="btn btn-ghost btn-circle min-w-11 min-h-11 transition-colors duration-200 shrink-0"
       [class.text-primary]="status() === playerStatus.Playing"
       [class.text-base-content/45]="status() !== playerStatus.Playing"
       type="button"

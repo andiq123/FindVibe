@@ -43,7 +43,7 @@ func (h *RecommendHandler) lastfmArtistTop(ctx context.Context, artist, skipTitl
 	return out, nil
 }
 
-// pairsFromSimilarArtists: artist.getSimilar → one top track each (different artists by design).
+// pairsFromSimilarArtists: artist.getSimilar → top tracks interleaved across related artists.
 func (h *RecommendHandler) pairsFromSimilarArtists(ctx context.Context, artist, skipTitle string) ([]lastfmPair, error) {
 	names, err := h.lastfmSimilarArtists(ctx, artist)
 	if err != nil || len(names) == 0 {
@@ -54,9 +54,9 @@ func (h *RecommendHandler) pairsFromSimilarArtists(ctx context.Context, artist, 
 	}
 
 	type slot struct {
-		i    int
-		pair lastfmPair
-		ok   bool
+		i     int
+		pairs []lastfmPair
+		ok    bool
 	}
 	ch := make(chan slot, len(names))
 	var wg sync.WaitGroup
@@ -69,7 +69,7 @@ func (h *RecommendHandler) pairsFromSimilarArtists(ctx context.Context, artist, 
 				ch <- slot{i: i}
 				return
 			}
-			ch <- slot{i: i, pair: tops[0], ok: true}
+			ch <- slot{i: i, pairs: tops[:min(3, len(tops))], ok: true}
 		}(i, name)
 	}
 	go func() {
@@ -77,16 +77,18 @@ func (h *RecommendHandler) pairsFromSimilarArtists(ctx context.Context, artist, 
 		close(ch)
 	}()
 
-	byIdx := make(map[int]lastfmPair, len(names))
+	byIdx := make(map[int][]lastfmPair, len(names))
 	for s := range ch {
 		if s.ok {
-			byIdx[s.i] = s.pair
+			byIdx[s.i] = s.pairs
 		}
 	}
-	out := make([]lastfmPair, 0, len(byIdx))
-	for i := 0; i < len(names); i++ {
-		if p, ok := byIdx[i]; ok {
-			out = append(out, p)
+	out := make([]lastfmPair, 0, len(byIdx)*3)
+	for round := 0; round < 3; round++ {
+		for i := 0; i < len(names); i++ {
+			if tracks := byIdx[i]; round < len(tracks) {
+				out = append(out, tracks[round])
+			}
 		}
 	}
 	return out, nil
@@ -274,6 +276,7 @@ func (h *RecommendHandler) lastfmAlbumTracks(ctx context.Context, artist, album 
 func (h *RecommendHandler) lastfmTracks(ctx context.Context, q url.Values, root string) ([]lastfmPair, error) {
 	q.Set("api_key", h.apiKey)
 	q.Set("format", "json")
+	q.Set("autocorrect", "1")
 	u := "https://ws.audioscrobbler.com/2.0/?" + q.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)

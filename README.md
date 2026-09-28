@@ -55,3 +55,12 @@ Vercel uses root `frontend`, build command `npm run build`, and output directory
 The production build generates its environment from `API_URL`; local development
 keeps using localhost. The Pi service uses root `backend`, entrypoint `./cmd`,
 and its existing linked PostgreSQL database and service environment variables.
+
+### Active music sources
+
+MusicBoss (`new.kachevo.org`) and Hitmos (`eu.hitmoz.com`) are the only active
+search, recommendation-resolution, and stream sources. The Mp3pm, Mp3mn, and
+Musify adapters remain in the codebase but are not registered. Saved tracks from
+paused providers resolve through the active sources when played online; existing
+offline downloads remain available. Both new sources are searched concurrently
+with the existing bounded cache and cross-source playback recovery.

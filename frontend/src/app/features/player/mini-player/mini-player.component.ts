@@ -8,6 +8,7 @@ import {
 import { FontAwesomeModule } from "@fortawesome/angular-fontawesome";
 import {
   faArrowUp,
+  faArrowRotateRight,
   faPause,
   faPlay,
   faStepBackward,
@@ -51,6 +52,7 @@ export class MiniPlayerComponent {
 
   playerStatus = PlayerStatus;
   faArrowUp = faArrowUp;
+  faArrowRotateRight = faArrowRotateRight;
   faPlay = faPlay;
   faPause = faPause;
   faStepBackward = faStepBackward;

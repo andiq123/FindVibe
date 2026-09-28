@@ -13,6 +13,8 @@ export interface Song {
 }
 
 const PROVIDER_HOST: Record<string, string> = {
+  MusicBoss: "MusicBoss",
+  Hitmos: "Hitmos",
   Mp3pm: "mp3.pm",
   Mp3mn: "mp3mn.net",
   Musify: "musify.club",

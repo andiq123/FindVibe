@@ -22,7 +22,7 @@ func (h *RecommendHandler) GetExploreCache(c fiber.Ctx) error {
 	return c.JSON(h.exploreCacheStatus())
 }
 
-// GET /explore?refresh=1 → chart shelves (Romania / Worldwide / vibes), server-cached 24h.
+// GET /explore?refresh=1 → chart shelves (Romania / Worldwide / vibes), server-cached 6h.
 // GET /explore?stream=1 → NDJSON: meta, then one section line as each shelf is ready, then done.
 func (h *RecommendHandler) GetExplore(c fiber.Ctx) error {
 	if h.apiKey == "" {

@@ -27,6 +27,7 @@ export class RadioService {
   private readonly playlist = inject(PlaylistService);
   private readonly toast = inject(ToastService);
   private extending = false;
+  private stationGeneration = 0;
   private lastExtendKey = "";
   /** Station origin — never abandon this vibe for whatever is currently playing. */
   private anchor: Song | null = null;
@@ -121,6 +122,9 @@ export class RadioService {
       this.error.set("Missing artist or title");
       return false;
     }
+    const generation = ++this.stationGeneration;
+    this.extending = false;
+    this.lastExtendKey = "";
     this.loading.set(true);
     this.loadingKey.set(opts?.loadingKey ?? "");
     this.error.set("");
@@ -146,6 +150,7 @@ export class RadioService {
         this.excludeLinks = prevLinks;
         this.excludeKeys = prevKeys;
       }
+      if (generation !== this.stationGeneration) return false;
       if (!next.length) {
         this.error.set("No new radio tracks found");
         return false;
@@ -170,6 +175,7 @@ export class RadioService {
   }
 
   private resetStation(): void {
+    this.stationGeneration++;
     this.anchor = null;
     this.styleSeeds = [];
     this.seedCursor = 0;
@@ -222,11 +228,12 @@ export class RadioService {
   }
 
   private async extend(): Promise<void> {
-    if (!this.playlist.radioActive() || this.extending) return;
+    if (!this.playlist.radioActive() || this.extending || this.loading()) return;
+    const generation = this.stationGeneration;
     const seed = this.pickExtendSeed();
     if (!seed?.link || !seed.artist?.trim() || !seed.title?.trim()) return;
 
-    const offset = this.extendRound;
+    const offset = (this.extendRound + 1) * 12;
     const extendKey = `${seed.link}\0${offset}`;
     if (extendKey === this.lastExtendKey) return;
 
@@ -240,10 +247,12 @@ export class RadioService {
         ...this.excludeLinks,
       ] as string[]);
       let next = await this.fetchUnique(seed, seen, offset);
+      if (generation !== this.stationGeneration || !this.playlist.radioActive()) return;
       // Same slice exhausted — nudge offset and try the anchor once more.
       if (!next.length && this.anchor && seed.link !== this.anchor.link) {
-        next = await this.fetchUnique(this.anchor, seen, offset + 1);
+        next = await this.fetchUnique(this.anchor, seen, offset + 12);
       }
+      if (generation !== this.stationGeneration || !this.playlist.radioActive()) return;
       if (next.length) {
         this.playlist.appendSongs(next);
         this.extendRound++;
@@ -259,10 +268,11 @@ export class RadioService {
         if (showFinding) this.toast.clear();
       }
     } catch {
+      if (generation !== this.stationGeneration) return;
       this.lastExtendKey = "";
       if (showFinding) this.toast.clear();
     } finally {
-      this.extending = false;
+      if (generation === this.stationGeneration) this.extending = false;
     }
   }
 

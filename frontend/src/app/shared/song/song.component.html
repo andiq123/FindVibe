@@ -12,7 +12,7 @@
   </div>
 } @else if (selectMode()) {
   <div
-    class="song-container group flex items-center gap-1 sm:gap-2 py-2.5 sm:py-3.5 transition-all duration-200 relative overflow-hidden px-2 sm:px-3 w-full touch-manipulation hover:bg-base-200/50 rounded-2xl"
+    class="song-container group flex items-center gap-1 sm:gap-2 py-1.5 transition-colors duration-200 relative overflow-hidden px-2 sm:px-3 w-full touch-manipulation rounded-2xl"
     [class.song-active]="isActive()"
     [class.ring-1]="selected()"
     [class.ring-primary/40]="selected()"
@@ -47,7 +47,7 @@
   </div>
 } @else {
   <div
-    class="song-container group flex items-center gap-2.5 sm:gap-3 py-2.5 sm:py-3.5 transition-all duration-200 relative overflow-hidden px-3 sm:px-4 w-full touch-manipulation hover:bg-base-200/50 rounded-2xl"
+    class="song-container group flex items-center gap-2.5 sm:gap-3 py-1.5 transition-colors duration-200 relative overflow-hidden px-2 sm:px-3 w-full touch-manipulation rounded-2xl"
     [class.song-active]="isActive()"
     [class.opacity-50]="isUnavailable()"
   >
@@ -72,7 +72,7 @@
     [attr.aria-disabled]="isUnavailable()"
   >
     <div
-      class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl overflow-hidden bg-base-300 shrink-0 album-art transition-colors duration-200"
+      class="relative w-11 h-11 rounded-xl overflow-hidden bg-base-300 shrink-0 album-art transition-colors duration-200"
       [class.ring-2]="isActive()"
       [class.ring-primary/40]="isActive()"
     >
@@ -84,7 +84,7 @@
         </div>
       }
       <div
-        class="absolute inset-0 bg-base-300/60 flex items-center justify-center opacity-0 group-hover/song:opacity-100 transition-opacity duration-150 z-10"
+        class="absolute inset-0 bg-base-300/60 flex items-center justify-center opacity-0 pointer-events-none song-play-overlay transition-opacity duration-150 z-10"
       >
         <app-player-button [status]="status()" />
       </div>
@@ -101,17 +101,8 @@
       />
     </div>
     <div class="min-w-0 flex-1 overflow-hidden py-0.5">
-      <app-moving-title
-        [title]="song().title"
-        [isActive]="isActive()"
-        classes="font-semibold text-sm sm:text-base block transition-colors duration-200"
-      />
-      <app-moving-title
-        [title]="song().artist"
-        [isActive]="isActive()"
-        classes="text-xs text-base-content/50 block transition-colors duration-200 truncate mt-0.5"
-        [class.text-accent/70]="isActive()"
-      />
+      <span class="font-semibold text-sm sm:text-base block truncate" [title]="song().title">{{ song().title }}</span>
+      <span class="text-xs text-base-content/50 block truncate mt-0.5" [title]="song().artist">{{ song().artist }}</span>
       @if (sourceLabel(); as src) {
         <p
           class="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-base-content/35 truncate"

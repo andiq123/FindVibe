@@ -6,7 +6,7 @@
   <button
     type="button"
     class="player-backdrop fixed inset-0 z-0 border-0 p-0 cursor-default transition-opacity duration-200"
-    [class.visible]="isOpeningAnimation() || isOpened() || isClosingAnimation()"
+    [class.visible]="(isOpeningAnimation() || isOpened()) && !isClosingAnimation()"
     [class.pointer-events-none]="!isOpened() || isClosingAnimation()"
     (click)="toggleSize()"
     (keydown.enter)="toggleSize()"
@@ -52,7 +52,7 @@
     <div class="absolute inset-0 z-0 overflow-hidden bg-base-100 rounded-[inherit]">
       <img
         [ngSrc]="displayImage()"
-        alt="Song Art BG"
+        alt="" aria-hidden="true"
         class="absolute inset-0 w-full h-full object-cover select-none pointer-events-none opacity-40 blur-[40px] player-bg-image"
         fill
         sizes="100vw"
@@ -131,21 +131,17 @@
               fontSize="1.35rem"
               color="var(--color-base-content)"
             />
-            @if (status() === playerStatus.Error) {
-              <p class="text-error/90 text-sm mt-1 truncate" role="status">
-                {{ playerService.playError() || "Couldn't play this track" }}
-                <span class="text-base-content/45"> · tap play to retry</span>
-              </p>
-            } @else {
-              <button
-                class="text-base-content/60 text-base truncate mt-0.5 min-h-10 py-1.5 active:text-base-content/90 transition-colors duration-150 text-left w-full touch-manipulation [@media(hover:hover)]:hover:text-base-content/80"
-                (click)="navigateToArtist()"
-                [attr.aria-label]="'View songs by ' + song().artist"
-                type="button"
-              >
-                {{ song().artist }}
-              </button>
-            }
+            <div class="player-caption-slot">
+              @if (status() === playerStatus.Error) {
+                <span class="player-caption text-error" role="status" animate.enter="feedback-enter" animate.leave="feedback-leave" [title]="playerService.playError() || 'Track unavailable'">
+                  Unavailable · tap retry
+                </span>
+              } @else {
+                <button class="player-caption text-base-content/60 text-left" type="button" (click)="navigateToArtist()" [attr.aria-label]="'View songs by ' + song().artist" animate.enter="feedback-enter" animate.leave="feedback-leave">
+                  {{ song().artist }}
+                </button>
+              }
+            </div>
           </div>
           <div class="flex items-center gap-1 shrink-0">
             @if (settingsService.showPlayerDownload()) {
@@ -239,10 +235,11 @@
               "
               (click)="togglePlay()"
             >
-              <fa-icon
-                [icon]="status() === playerStatus.Playing ? faPause : faPlay"
-                class="text-2xl"
-              />
+              @if (status() === playerStatus.Loading) {
+                <span class="loading loading-spinner loading-md" aria-hidden="true"></span>
+              } @else {
+                <fa-icon [icon]="status() === playerStatus.Error ? faArrowRotateRight : status() === playerStatus.Playing ? faPause : faPlay" class="text-2xl" />
+              }
             </button>
             <button
               type="button"

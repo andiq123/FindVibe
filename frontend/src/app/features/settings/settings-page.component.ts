@@ -55,8 +55,8 @@ interface SourcesResponse {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-content>
-      <div class="space-y-4 pt-1 max-w-xl mx-auto">
-        <header class="mb-1">
+      <div class="settings-grid pt-1">
+        <header class="page-heading settings-heading">
           <span
             class="text-[10px] font-bold text-base-content/50 uppercase tracking-[0.18em]"
           >
@@ -135,7 +135,7 @@ interface SourcesResponse {
             </div>
             <button
               type="button"
-              class="shrink-0 h-9 px-3 rounded-xl text-xs font-semibold text-error/80 active:bg-error/10 disabled:opacity-40"
+              class="shrink-0 min-h-11 px-3 rounded-xl text-xs font-semibold text-error/80 active:bg-error/10 disabled:opacity-40"
               [disabled]="!recentCount()"
               (click)="clearHistory()"
             >
@@ -151,7 +151,7 @@ interface SourcesResponse {
             </div>
             <button
               type="button"
-              class="shrink-0 h-9 px-3 rounded-xl text-xs font-semibold bg-primary/15 text-primary disabled:opacity-40"
+              class="shrink-0 min-h-11 px-3 rounded-xl text-xs font-semibold bg-primary/15 text-primary disabled:opacity-40"
               [disabled]="exploreRefreshing()"
               (click)="refreshExplore()"
             >
@@ -178,7 +178,7 @@ interface SourcesResponse {
           >
             <button
               type="button"
-              class="h-9 rounded-lg text-xs font-semibold transition-colors"
+              class="min-h-11 rounded-lg text-xs font-semibold transition-colors"
               [class.bg-base-100]="suggestRegion() === 'ro'"
               [class.text-base-content]="suggestRegion() === 'ro'"
               [class.text-base-content/50]="suggestRegion() !== 'ro'"
@@ -188,7 +188,7 @@ interface SourcesResponse {
             </button>
             <button
               type="button"
-              class="h-9 rounded-lg text-xs font-semibold transition-colors"
+              class="min-h-11 rounded-lg text-xs font-semibold transition-colors"
               [class.bg-base-100]="suggestRegion() === 'device'"
               [class.text-base-content]="suggestRegion() === 'device'"
               [class.text-base-content/50]="suggestRegion() !== 'device'"
@@ -204,7 +204,7 @@ interface SourcesResponse {
             <h2 class="text-sm font-bold tracking-tight">Source health</h2>
             <button
               type="button"
-              class="h-9 px-3 rounded-xl text-xs font-semibold bg-base-content/[0.06] text-base-content/70 disabled:opacity-50"
+              class="min-h-11 px-3 rounded-xl text-xs font-semibold bg-base-content/[0.06] text-base-content/70 disabled:opacity-50"
               (click)="reload()"
               [disabled]="sources.isLoading()"
             >

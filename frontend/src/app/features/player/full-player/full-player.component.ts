@@ -20,6 +20,7 @@ import { Router } from "@angular/router";
 import { FontAwesomeModule } from "@fortawesome/angular-fontawesome";
 import {
   faArrowDown,
+  faArrowRotateRight,
   faArrowUp,
   faChevronRight,
   faPause,
@@ -101,6 +102,7 @@ export class FullPlayerComponent implements OnInit, AfterViewInit, OnDestroy {
   faStepBackward = faStepBackward;
   faStepForward = faStepForward;
   faPlay = faPlay;
+  faArrowRotateRight = faArrowRotateRight;
   faPause = faPause;
   faRepeat = faRepeat;
   faShuffle = faShuffle;

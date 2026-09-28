@@ -1,7 +1,7 @@
 <app-page-content>
-  <div class="search-page space-y-4 sm:space-y-5 pt-1">
-    <header class="page-heading"><p class="page-eyebrow">YOUR NEXT FAVORITE</p><h1>Search</h1></header>
-    <app-search-bar [query]="query()" />
+  <div class="search-page space-y-4 pt-1">
+    <div class="page-toolbar"><header class="page-heading"><p class="page-eyebrow">YOUR NEXT FAVORITE</p><h1>Search</h1></header>
+    <app-search-bar [query]="query()" /></div>
 
     @if (status() === searchStatus.Loading) {
       <div class="search-progress" role="status"><span class="loading loading-spinner loading-xs"></span>
@@ -19,28 +19,7 @@
       />
     } @else {
       @if ((status() === searchStatus.None || status() === searchStatus.Loading) && songs().length === 0) {
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-start">
-          <div class="lg:col-span-1 space-y-2 sm:space-y-3">
-            <h3
-              class="text-[10px] sm:text-[11px] font-semibold text-base-content/45 uppercase tracking-[0.14em]"
-            >
-              First result
-            </h3>
-            <div
-              class="premium-card max-lg:h-[4.5rem] lg:aspect-square animate-pulse bg-base-content/5"
-            ></div>
-          </div>
-          <div class="lg:col-span-2 space-y-2 sm:space-y-3">
-            <h3
-              class="text-[10px] sm:text-[11px] font-semibold text-base-content/45 uppercase tracking-[0.14em]"
-            >
-              Songs
-            </h3>
-            <div class="relative -mx-1 min-h-[240px] sm:min-h-[320px]">
-              <app-song-list [songs]="[]" [isLoading]="true" />
-            </div>
-          </div>
-        </div>
+        <app-song-list [songs]="[]" [isLoading]="true" [cards]="true" />
       } @else if (status() === searchStatus.Error) {
         <app-empty-state
           [icon]="faTriangleExclamation"
@@ -56,134 +35,17 @@
           description="Try a shorter query or a different artist name."
         />
       } @else {
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-start">
-          <div class="lg:col-span-1 space-y-2 sm:space-y-3">
-            <h3
-              class="text-[10px] sm:text-[11px] font-semibold text-base-content/45 uppercase tracking-[0.14em]"
-            >
-              First result
-            </h3>
-            @if (topSong(); as featuredSong) {
-              <div
-                class="premium-card group relative overflow-hidden cursor-pointer max-lg:flex max-lg:items-center max-lg:gap-3 max-lg:p-2.5 lg:aspect-square [--press-scale:0.97]"
-                (click)="toggleTopSong()"
-                role="button"
-                tabindex="0"
-                (keydown.enter)="
-                  $event.target === $event.currentTarget && toggleTopSong()
-                "
-                (keydown.space)="
-                  $event.target === $event.currentTarget && toggleTopSong();
-                  $event.preventDefault()
-                "
-                [class.opacity-50]="isTopSongUnavailable()"
-                [class.pointer-events-none]="isTopSongUnavailable()"
-                [attr.aria-disabled]="isTopSongUnavailable()"
-              >
-                <div
-                  class="relative shrink-0 overflow-hidden bg-base-300 ring-1 ring-inset ring-base-content/10 max-lg:w-14 max-lg:h-14 max-lg:rounded-xl lg:absolute lg:inset-0 lg:rounded-none lg:ring-0"
-                >
-                  <img
-                    class="w-full h-full object-cover opacity-95 group-hover:scale-105 transition-transform duration-500"
-                    [src]="featuredSong.image || 'no_album_art.jpg'"
-                    [alt]="featuredSong.title + ' by ' + featuredSong.artist"
-                    width="512"
-                    height="512"
-                    loading="eager"
-                    decoding="async"
-                    referrerpolicy="no-referrer"
-                    (error)="$any($event.target).src = 'no_album_art.jpg'"
-                  />
-                  <div
-                    class="absolute inset-0 bg-gradient-to-t from-base-100 via-base-100/40 to-transparent max-lg:hidden"
-                  ></div>
-                </div>
-
-                <div
-                  class="relative z-10 min-w-0 flex-1 max-lg:flex max-lg:items-center max-lg:gap-2 lg:absolute lg:inset-0 lg:p-5 lg:flex lg:flex-col lg:justify-end"
-                >
-                  <div class="min-w-0 flex-1 lg:contents">
-                    <div class="flex items-center gap-1.5 mb-0.5 lg:mb-2">
-                      <span
-                        class="px-1.5 py-0.5 bg-primary/20 text-primary text-[9px] font-bold rounded uppercase tracking-wider"
-                      >
-                        Song
-                      </span>
-                      @if (sourceHost(featuredSong.provider); as src) {
-                        <span
-                          class="px-1.5 py-0.5 bg-base-content/8 text-base-content/45 text-[9px] font-bold rounded uppercase tracking-wider truncate"
-                        >
-                          {{ src }}
-                        </span>
-                      }
-                    </div>
-                    <h4
-                      class="text-sm sm:text-base lg:text-2xl xl:text-3xl font-bold text-base-content leading-tight truncate"
-                    >
-                      {{ featuredSong.title }}
-                    </h4>
-                    <p class="text-base-content/50 text-xs truncate mt-0.5">
-                      {{ featuredSong.artist }}
-                    </p>
-                  </div>
-
-                  <div
-                    class="flex gap-1 items-center shrink-0 max-lg:ml-auto lg:mt-4"
-                  >
-                    <button
-                      type="button"
-                      class="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-content"
-                      (click)="toggleTopSong(); $event.stopPropagation()"
-                      [disabled]="isTopSongUnavailable()"
-                      [attr.aria-disabled]="isTopSongUnavailable()"
-                      aria-label="Play top result"
-                    >
-                      @if (isTopSongError()) {
-                        <fa-icon
-                          [icon]="faTriangleExclamation"
-                          class="text-sm"
-                        />
-                      } @else {
-                        <app-player-button [status]="topPlayerStatus()" />
-                      }
-                    </button>
-                    <app-favorite-button
-                      [song]="featuredSong"
-                      (click)="$event.stopPropagation()"
-                    />
-                  </div>
-                </div>
-              </div>
+        <section aria-label="Search results">
+          <div class="results-heading">
+            <h2>Songs</h2><span>{{ songs().length }} results on this page</span>
+          </div>
+          <app-song-list [songs]="songs()" [cards]="true" (playlistChange)="onChangePlaylist()" />
+          @if (pagination(); as pages) {
+            @if (pages.totalPages > 1 && status() !== searchStatus.Loading) {
+              <div class="mt-4"><app-pagination [pagination]="pages" (pageChange)="onPageChange($event)" /></div>
             }
-          </div>
-
-          <div class="lg:col-span-2 space-y-2 sm:space-y-3">
-            <h3
-              class="text-[10px] sm:text-[11px] font-semibold text-base-content/45 uppercase tracking-[0.14em]"
-            >
-              Songs
-            </h3>
-            <div class="relative -mx-1">
-              <app-song-list
-                [songs]="remainingSongs()"
-                [isLoading]="false"
-                [emptyStateTitle]="songListEmptyTitle()"
-                [emptyStateDescription]="songListEmptyDescription()"
-                (playlistChange)="onChangePlaylist()"
-              />
-              @if (pagination(); as pages) {
-                @if (pages.totalPages > 1 && status() !== searchStatus.Loading) {
-                  <div class="mt-4 px-2 pb-2">
-                    <app-pagination
-                      [pagination]="pages"
-                      (pageChange)="onPageChange($event)"
-                    />
-                  </div>
-                }
-              }
-            </div>
-          </div>
-        </div>
+          }
+        </section>
       }
     }
   </div>

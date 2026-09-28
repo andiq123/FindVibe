@@ -44,7 +44,7 @@ func TestStreamSurvivesHandlerReturnAndPreservesRange(t *testing.T) {
 	h := NewRecommendHandlerUpstream(client, client, "", stubSearch{}, nil)
 	app := fiber.New()
 	app.Get("/stream", h.GetStream)
-	req := httptest.NewRequest("GET", "/stream?artist=Test&title=Song&link=https%3A%2F%2Fmp3.pm%2Fsong.mp3", nil)
+	req := httptest.NewRequest("GET", "/stream?artist=Test&title=Song&link=https%3A%2F%2Fnew.kachevo.org%2Fget%2Fmusic%2Fsong.mp3", nil)
 	req.Header.Set("Range", "bytes=100-")
 	resp, err := app.Test(req)
 	if err != nil {
@@ -83,7 +83,7 @@ func TestStreamRejectsRedirectOutsideProviders(t *testing.T) {
 		return &http.Response{StatusCode: 302, Header: http.Header{"Location": {"http://127.0.0.1/private"}}, Body: io.NopCloser(strings.NewReader("")), Request: r}, nil
 	})}
 	h := NewRecommendHandlerUpstream(client, client, "", stubSearch{}, nil)
-	resp, err := h.openStreamUpstream(context.Background(), "https://mp3.pm/song.mp3", "")
+	resp, err := h.openStreamUpstream(context.Background(), "https://new.kachevo.org/get/music/song.mp3", "")
 	if resp != nil {
 		resp.Body.Close()
 	}
@@ -93,8 +93,8 @@ func TestStreamRejectsRedirectOutsideProviders(t *testing.T) {
 }
 
 func TestStreamRecoversThroughAnotherProvider(t *testing.T) {
-	dead := "https://cs1.mp3.pm/dead.mp3"
-	good := "https://musify.club/good.mp3"
+	dead := "https://new.kachevo.org/get/music/dead.mp3"
+	good := "https://eu.hitmoz.com/get/music/good.mp3"
 	calls := []string{}
 	client := &http.Client{Transport: streamTransport(func(r *http.Request) (*http.Response, error) {
 		calls = append(calls, r.URL.String())
@@ -106,7 +106,7 @@ func TestStreamRecoversThroughAnotherProvider(t *testing.T) {
 	})}
 	search := stubSearch{hits: map[string][]domain.Song{"adele hello": {
 		{Artist: "Adele", Title: "Hello", Link: dead},
-		{Artist: "Other", Title: "Wrong", Link: "https://musify.club/wrong.mp3"},
+		{Artist: "Other", Title: "Wrong", Link: "https://eu.hitmoz.com/get/music/wrong.mp3"},
 		{Artist: "Adele", Title: "Hello", Link: good},
 	}}}
 	h := NewRecommendHandlerUpstream(client, client, "", search, nil)

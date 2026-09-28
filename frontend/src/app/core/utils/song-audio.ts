@@ -11,9 +11,20 @@ export function streamUrl(song: Song): string {
   return `${environment.API_URL}/stream?${params}`;
 }
 
+/** Saved tracks from paused providers resolve through the active backend sources. */
+export function directAudioEnabled(song: Song): boolean {
+  try {
+    const url = new URL(upgradeToHttps(song.link));
+    return url.protocol === "https:" && !url.username && !url.password &&
+      (!url.port || url.port === "443") &&
+      ["new.kachevo.org", "eu.hitmoz.com"].includes(url.hostname) &&
+      url.pathname.startsWith("/get/music/");
+  } catch { return false; }
+}
+
 /** Cache/download only readable responses; opaque blobs contain no audio. */
 export async function fetchSongAudio(song: Song): Promise<Response> {
-  for (const url of [upgradeToHttps(song.link), streamUrl(song)]) {
+  for (const url of directAudioEnabled(song) ? [upgradeToHttps(song.link), streamUrl(song)] : [streamUrl(song)]) {
     try {
       const response = await fetch(url, {
         credentials: "omit",

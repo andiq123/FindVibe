@@ -69,3 +69,21 @@ describe("recommendationSeeds", () => {
     expect(recommendationSeeds([song(1)], [song(1)], {}).length).toBe(1);
   });
 });
+
+describe("discovery listening confidence", () => {
+  it("prefers a listened track to a fresh click", () => {
+    const clicked = song(1), heard = song(2), now = Date.now();
+    const result = recommendationSeeds([clicked, heard], [], {
+      [clicked.link]: { ms: 0, plays: 10, lastAt: now },
+      [heard.link]: { ms: 120_000, plays: 1, lastAt: now },
+    }, now);
+    expect(result[0]).toEqual(heard);
+  });
+  it("combines listening across source duplicates without double counting", () => {
+    const a = song(1), mirror = { ...a, link: "https://mirror/1" }, b = song(2), now = Date.now();
+    const stats = { [a.link]: {ms: 15_000, plays: 1, lastAt: now}, [mirror.link]: {ms: 15_000, plays: 1, lastAt: now} };
+    const result = recommendationSeeds([a, b, mirror], [a], stats, now);
+    expect(result.length).toBe(2);
+    expect(result[0]).toEqual(a);
+  });
+});

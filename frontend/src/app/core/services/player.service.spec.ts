@@ -13,7 +13,7 @@ import { Song } from "../models/song.model";
 import { streamUrl } from "../utils/song-audio";
 
 describe("PlayerService recovery", () => {
-  const song: Song = { id: "1", artist: "Artist", title: "Song", image: "", link: "https://mp3.pm/song.mp3" };
+  const song: Song = { id: "1", artist: "Artist", title: "Song", image: "", link: "https://new.kachevo.org/get/music/song.mp3" };
   let player: PlayerService;
   let status: ReturnType<typeof signal<PlayerStatus>>;
   let playSource: jasmine.Spy;
@@ -53,6 +53,14 @@ describe("PlayerService recovery", () => {
     expect(playSource.calls.mostRecent().args[0]).toBe(streamUrl(song));
     status.set(PlayerStatus.Error); TestBed.tick();
     expect(playSource.calls.count()).toBe(2);
+    expect(player.playError()).toContain("Couldn't play");
+  });
+  it("resolves paused-provider songs without contacting their old host", async () => {
+    const old = { ...song, link: "https://mp3.pm/song.mp3" };
+    await player.setSong(old); TestBed.tick();
+    expect(playSource).toHaveBeenCalledOnceWith(streamUrl(old));
+    status.set(PlayerStatus.Error); TestBed.tick();
+    expect(playSource.calls.count()).toBe(1);
     expect(player.playError()).toContain("Couldn't play");
   });
   it("does not autoplay when a restored paused source fails", async () => {

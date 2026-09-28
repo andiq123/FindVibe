@@ -23,9 +23,9 @@ import { faMusic, IconDefinition } from "../../icons";
     @if (isLoading()) {
       <app-skeleton type="song" [count]="skeletonCount()" />
     } @else {
-      <ul class="flex flex-col">
+      <ul class="song-list" [class.song-list-columns]="columns()" [class.song-list-cards]="cards()">
         @for (song of visibleSongs(); track song.link) {
-          <li class="group/item list-none">
+          <li class="group/item list-none min-w-0">
             <app-song
               [song]="song"
               [selectMode]="selectMode()"
@@ -55,6 +55,12 @@ import { faMusic, IconDefinition } from "../../icons";
   `,
   styles: [
     `
+      .song-list { display: flex; flex-direction: column; }
+      @media (min-width: 1100px) {
+        .song-list-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
+      }
+      .song-list-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 10px; }
+      .song-list-cards > li { border: 1px solid color-mix(in oklab, var(--color-base-content) 8%, transparent); border-radius: var(--radius-lg); background: color-mix(in oklab, var(--color-base-200) 70%, transparent); overflow: hidden; }
       :host {
         display: block;
       }
@@ -66,6 +72,8 @@ import { faMusic, IconDefinition } from "../../icons";
 })
 export class SongListComponent implements OnDestroy {
   songs = input.required<Song[]>();
+  columns = input(false);
+  cards = input(false);
   isLoading = input(false);
   selectMode = input(false);
   /** Vault rows: radio mini-button instead of add-to-queue. */

@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, untracked, inject, signal } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { firstValueFrom } from "rxjs";
+import { directAudioEnabled } from "../../core/utils/song-audio";
 import { Song, songKey } from "../../core/models/song.model";
 import { environment } from "../../../environments/environment";
 import { LibraryService } from "../library/services/library.service";
@@ -12,9 +13,9 @@ const LOCAL_SHELF = new Set(["vault", "recents", "because", "because2", "popular
 const BECAUSE_KEY = "exploreBecause";
 const CHARTS_KEY = "exploreCharts";
 /** Match Fiber exploreTTL / recommendTTL. */
-const CHARTS_TTL_MS = 24 * 60 * 60 * 1000;
-/** ponytail: /recommend is the expensive personalization hit — once/day per seed. */
-const BECAUSE_TTL_MS = 24 * 60 * 60 * 1000;
+const CHARTS_TTL_MS = 6 * 60 * 60 * 1000;
+/** ponytail: /recommend is the expensive personalization hit — once per six-hour window per seed. */
+const BECAUSE_TTL_MS = 6 * 60 * 60 * 1000;
 const DAY_MS = 86_400_000;
 const BECAUSE_SLOTS = 2;
 /** Soft cap after Fiber resolve (handler returns up to recommendResolveCap). */
@@ -87,9 +88,13 @@ export class ExploreService {
   });
 
   private loaded = false;
+  private chartsLoadedAt = 0;
+  private readonly tasteRevision = computed(() => recommendationSeeds(
+    this.storage.recentSongs(), this.library.songs(), this.storage.listenStats(),
+  ).slice(0, 8).map(songKey).join("|"));
   /** Last chart payload from API (no local shelves). */
   private charts: ExploreSection[] = [];
-  /** Personalized shelves — memory + localStorage 24h (up to 2 seeds). */
+  /** Personalized shelves — memory + localStorage 6h (up to 2 seeds). */
   private becauseSlots: (ExploreSection | null)[] = [null, null];
   private becauseSeeds: (string | null)[] = [null, null];
   private becauseFetchKey: string | null = null;
@@ -99,6 +104,7 @@ export class ExploreService {
 
   constructor() {
     effect((onCleanup) => {
+      this.tasteRevision();
       this.storage.recentSongs();
       this.library.songs();
       // Coalesce library updates; don't refetch on each playback-time tick.
@@ -122,7 +128,7 @@ export class ExploreService {
       return;
     }
 
-    if (!refresh && this.loaded && this.charts.length) {
+    if (!refresh && this.loaded && this.charts.length && Date.now() - this.chartsLoadedAt < CHARTS_TTL_MS) {
       this.hydrateBecauseFromCache();
       this.sections.set(this.merge(this.charts));
       void this.ensureBecause(false);
@@ -141,6 +147,7 @@ export class ExploreService {
       );
       this.charts = (r?.sections ?? []).filter((s) => !LOCAL_SHELF.has(s.id));
       this.country.set(r?.country || "Romania");
+      this.chartsLoadedAt = Date.now();
       this.persistCharts();
       this.hydrateBecauseFromCache();
       this.sections.set(this.merge(this.charts));
@@ -199,7 +206,7 @@ export class ExploreService {
 
   private hydrateChartsFromCache(allowStale: boolean): boolean {
     const c = this.storage.getItem<ChartsCache>(CHARTS_KEY);
-    if (!c?.sections?.length) return false;
+    if (!c?.sections?.length || c.sections.some((section) => !section.songs.every(directAudioEnabled))) return false;
     if (!allowStale && Date.now() - c.at > CHARTS_TTL_MS) return false;
     this.charts = c.sections.filter((s) => !LOCAL_SHELF.has(s.id));
     if (c.country) this.country.set(c.country);
@@ -296,7 +303,8 @@ export class ExploreService {
 
       if (
         this.becauseSeeds[slot] === key &&
-        this.becauseSlots[slot]?.songs.length
+        this.becauseSlots[slot]?.songs.length &&
+        store.items.some(c => c.seed === key && this.cacheFresh(c))
       ) {
         continue;
       }
@@ -338,7 +346,8 @@ export class ExploreService {
     if (
       !force &&
       this.becauseSeeds[slot] === key &&
-      this.becauseSlots[slot]?.songs.length
+      this.becauseSlots[slot]?.songs.length &&
+      this.readBecauseStore().items.some(c => c.seed === key && this.cacheFresh(c))
     ) {
       return;
     }
@@ -405,7 +414,8 @@ export class ExploreService {
         this.sections.set(this.merge(this.charts));
       } else if (
         this.becauseSeeds[slot] === key &&
-        this.becauseSlots[slot]?.songs.length
+        this.becauseSlots[slot]?.songs.length &&
+        store.items.some(c => c.seed === key && this.cacheFresh(c))
       ) {
         this.sections.set(this.merge(this.charts));
       }
@@ -425,7 +435,7 @@ export class ExploreService {
   }
 
   private cacheFresh(c: BecauseCache): boolean {
-    return Date.now() - c.at <= BECAUSE_TTL_MS;
+    return Date.now() - c.at <= BECAUSE_TTL_MS && c.songs.every(directAudioEnabled);
   }
 
   private sectionFromCache(c: BecauseCache, slot: number): ExploreSection {

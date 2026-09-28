@@ -9,10 +9,12 @@ import (
 )
 
 var (
-	matchParenRe = regexp.MustCompile(`\([^)]*\)|\[[^\]]*\]`)
-	matchFeatRe  = regexp.MustCompile(`(?i)\s*(feat\.?|ft\.?|featuring)\s+.*$`)
-	matchJunkRe  = regexp.MustCompile(`(?i)\b(original\s+mix|extended\s+mix|radio\s+edit|club\s+mix|remix|bootleg|edit|mix|version|remaster(ed)?|instrumental|karaoke|live|acoustic|dub)\b`)
-	matchSpaceRe = regexp.MustCompile(`\s+`)
+	matchParenRe       = regexp.MustCompile(`\([^)]*\)|\[[^\]]*\]`)
+	matchFeatRe        = regexp.MustCompile(`(?i)\s*(feat\.?|ft\.?|featuring)\s+.*$`)
+	matchJunkRe        = regexp.MustCompile(`(?i)\b(original\s+mix|extended\s+mix|radio\s+edit|club\s+mix|remix|bootleg|edit|mix|version|remaster(ed)?|instrumental|karaoke|live|acoustic|dub)\b`)
+	matchVersionRe     = regexp.MustCompile(`(?i)\b(remix|nightcore|sped[ -]?up|speed[ -]?up|slowed|karaoke|instrumental|cover|live|acoustic|bootleg|mashup)\b`)
+	matchPunctuationRe = regexp.MustCompile(`[^\pL\pN]+`)
+	matchSpaceRe       = regexp.MustCompile(`\s+`)
 )
 
 // SongKey collapses remix/feat variants: "Collide (Extended Mix)" ≈ "Collide".
@@ -45,6 +47,12 @@ func IsPlayableMatch(wantArtist, wantTitle string, got domain.Song) bool {
 		return false
 	}
 
+	// Do not substitute a transformed recording for the requested studio track.
+	for _, version := range matchVersionRe.FindAllString(strings.ToLower(gotTitle+" "+gotArtist), -1) {
+		if !strings.Contains(strings.ToLower(wantTitle+" "+wantArtist), version) {
+			return false
+		}
+	}
 	wantKey := SongKey(wantArtist, wantTitle)
 	gotKey := SongKey(gotArtist, gotTitle)
 	if wantKey != "" && wantKey == gotKey {
@@ -65,17 +73,11 @@ func artsOverlap(want, got string) bool {
 	if want == got {
 		return true
 	}
-	return strings.Contains(got, want) || strings.Contains(want, got)
+	return strings.Contains(" "+matchPunctuationRe.ReplaceAllString(got, " ")+" ", " "+matchPunctuationRe.ReplaceAllString(want, " ")+" ") || strings.Contains(" "+matchPunctuationRe.ReplaceAllString(want, " ")+" ", " "+matchPunctuationRe.ReplaceAllString(got, " ")+" ")
 }
 
 func titleCoresOverlap(want, got string) bool {
-	if want == got {
-		return true
-	}
-	if len(want) < 4 || len(got) < 4 {
-		return false
-	}
-	return strings.Contains(got, want) || strings.Contains(want, got)
+	return strings.TrimSpace(matchPunctuationRe.ReplaceAllString(want, " ")) == strings.TrimSpace(matchPunctuationRe.ReplaceAllString(got, " "))
 }
 
 // PickPlayableSong chooses the strongest artist+title match in a provider peek.

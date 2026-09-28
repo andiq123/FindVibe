@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from "@angular/core";
 import { PlayerStatus } from "../../features/player/models/player.model";
-import { faPause, faPlay } from "../icons";
+import { faPause, faPlay, faArrowRotateRight } from "../icons";
 import { FontAwesomeModule } from "@fortawesome/angular-fontawesome";
 @Component({
   selector: "app-player-button",
@@ -14,5 +14,6 @@ export class PlayerButtonComponent {
   status = input.required<PlayerStatus>();
   playerStatus = PlayerStatus;
   faPlay = faPlay;
+  faArrowRotateRight = faArrowRotateRight;
   faPause = faPause;
 }

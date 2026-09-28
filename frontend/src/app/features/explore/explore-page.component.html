@@ -19,46 +19,47 @@
             Explore
           </h1>
         </div>
-        <button
-          type="button"
-          class="explore-refresh"
-          (click)="onRefresh()"
-          [disabled]="explore.loading()"
-          aria-label="Refresh charts"
-        >
-          <fa-icon
-            [icon]="faArrowRotateRight"
-            [class.animate-spin]="explore.loading()"
-          />
-        </button>
       </div>
 
       <app-search-bar />
+      <button
+        type="button"
+        class="explore-refresh"
+        (click)="onRefresh()"
+        [disabled]="explore.loading()"
+        aria-label="Refresh charts"
+      >
+        <fa-icon
+          [icon]="faArrowRotateRight"
+          [class.animate-spin]="explore.loading()"
+        />
+      </button>
     </div>
 
-    @if (explore.sections()[0]; as featured) {
-      @if (featuredSong(); as pick) {
-        <section class="discovery-feature" aria-label="Featured discovery">
-          <div class="discovery-feature-copy">
-            <span class="page-eyebrow">A NEW LISTEN</span>
-            <h2>{{ pick.title }}</h2>
-            <p>{{ pick.artist }}</p>
-            <button type="button" class="discovery-play" (click)="playFromShelf(featured, pick)" [attr.aria-label]="'Play ' + pick.title + ' by ' + pick.artist">
-              <span aria-hidden="true">▶</span> Listen now
-            </button>
-          </div>
-          <img [src]="featuredImage() || cover(pick)" alt="" width="320" height="320" fetchpriority="high" decoding="async" (error)="onCoverError($event)" />
-        </section>
+    <div class="discovery-picks" aria-label="Quick picks">
+      @for (pick of featuredPicks(); track pick.song.link; let first = $first) {
+        <button type="button" class="discovery-pick" (click)="playQuickPick(pick.section, pick.song)" [attr.aria-label]="actionLabel(pick.song)" [class.is-playing]="statusFor(pick.song) === playerStatus.Playing" [attr.aria-busy]="statusFor(pick.song) === playerStatus.Loading">
+          <img class="discovery-pick-glow" [src]="cover(pick.song)" alt="" aria-hidden="true" width="120" height="120" (error)="onCoverError($event)" />
+          <span class="discovery-pick-cover">
+          <img class="discovery-pick-art" [src]="cover(pick.song)" alt="" width="80" height="80" (error)="onCoverError($event)" />
+            @if (providerLabel(pick.song.provider); as provider) {
+              <span class="explore-source-badge" [title]="'Source: ' + provider">{{ provider }}</span>
+            }
+          </span>
+          <span class="discovery-pick-copy">
+            <span class="page-eyebrow">{{ first ? 'A NEW LISTEN' : pick.section.subtitle }}</span>
+            <strong>{{ pick.song.title }}</strong>
+            <span class="discovery-pick-artist">{{ pick.song.artist }}</span>
+          </span>
+          <span class="discovery-pick-play" aria-hidden="true"><app-player-button [status]="statusFor(pick.song)" /></span>
+        </button>
       }
-    }
+    </div>
 
     @if (explore.needsTaste() && !explore.loading() && explore.sections().length) {
-      <div class="explore-nudge" role="status">
-        <p class="explore-nudge-title">Make it yours</p>
-        <p class="explore-nudge-body">
-          Save a few favorites to discover more music you love.
-        </p>
-        <a routerLink="/songs" class="explore-nudge-cta">Find songs</a>
+      <div class="explore-taste-tip">
+        <p>Save favorites to fine-tune your discovery.</p>
+        <a routerLink="/songs">Find songs <span aria-hidden="true">↗</span></a>
       </div>
     }
 
@@ -111,13 +112,13 @@
                     @if (section.id === "vault") {
                       {{ section.title }}
                     } @else {
-                      Because you liked
+                      More like
                       <button
                         type="button"
                         class="explore-title-seed"
                         (click)="playSeed(seed)"
                         [attr.aria-label]="
-                          'Play ' + seed.title + ' by ' + seed.artist
+                          actionLabel(seed)
                         "
                       >
                         {{ seed.title }}
@@ -153,9 +154,11 @@
                   type="button"
                   class="explore-card explore-card-in"
                   [style.--c]="$index"
+                  [class.is-playing]="statusFor(song) === playerStatus.Playing"
+                  [attr.aria-busy]="statusFor(song) === playerStatus.Loading"
                   (click)="playFromShelf(section, song)"
                   [attr.aria-label]="
-                    'Play ' + song.title + ' by ' + song.artist
+                    actionLabel(song)
                   "
                 >
                   <div class="explore-art">
@@ -169,6 +172,12 @@
                       decoding="async"
                       draggable="false"
                     />
+                    @if (providerLabel(song.provider); as provider) {
+                      <span class="explore-source-badge" [title]="'Source: ' + provider">{{ provider }}</span>
+                    }
+                    <span class="explore-card-state" [class.is-visible]="statusFor(song) !== playerStatus.Stopped" aria-hidden="true">
+                      <app-player-button [status]="statusFor(song)" />
+                    </span>
                   </div>
                   <span class="explore-card-title">{{ song.title }}</span>
                   <span class="explore-card-artist">{{ song.artist }}</span>

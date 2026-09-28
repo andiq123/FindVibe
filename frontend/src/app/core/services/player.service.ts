@@ -18,7 +18,7 @@ import { AudioService } from "./audio.service";
 import { RadioService } from "./radio.service";
 import { ToastService } from "./toast.service";
 import { StorageService } from "./storage.service";
-import { streamUrl } from "../utils/song-audio";
+import { directAudioEnabled, streamUrl } from "../utils/song-audio";
 import { upgradeToHttps } from "../utils/utils";
 
 /** Cap consecutive dead tracks so a broken queue can't spin forever. */
@@ -241,7 +241,8 @@ export class PlayerService implements OnDestroy {
 
     // Online: CDN first — never await Cache API before play() (breaks iOS auto-next).
     // Offline: vault blob only.
-    let src = secureLink;
+    let src = directAudioEnabled(song) ? secureLink : streamUrl(song);
+    this.triedStream = !directAudioEnabled(song);
     if (this.settingsService.isNavigatorOffline()) {
       const offlineResponse =
         await this.offlineStorageService.isAvailableOffline(secureLink);
@@ -278,7 +279,7 @@ export class PlayerService implements OnDestroy {
       this.audioService.clearPreload();
       return;
     }
-    this.audioService.preload(upgradeToHttps(next.link));
+    this.audioService.preload(directAudioEnabled(next) ? upgradeToHttps(next.link) : streamUrl(next));
   }
 
   /** Retry hard-reloads the current track when we're on Error/Ended. */

@@ -1,7 +1,7 @@
 <app-page-content>
   <div class="w-full mb-4">
-    <div class="flex items-end gap-3">
-      <div class="flex flex-col min-w-0 flex-1">
+    <div class="page-header-row flex items-center flex-wrap gap-3">
+      <div class="flex flex-col min-w-[160px] flex-1">
         <span
           class="text-[10px] font-bold text-base-content/50 uppercase tracking-[0.18em]"
         >
@@ -25,14 +25,14 @@
         <div class="shrink-0 ml-auto flex items-center gap-2">
           <button
             type="button"
-            class="h-9 px-3 rounded-xl text-xs font-semibold touch-manipulation inline-flex items-center gap-1.5 bg-primary/15 text-primary"
+            class="min-h-11 px-3 rounded-xl text-xs font-semibold touch-manipulation inline-flex items-center gap-1.5 bg-primary/15 text-primary"
             (click)="playAll()"
           >
             Play all
           </button>
           <button
             type="button"
-            class="h-9 px-3 rounded-xl text-xs font-semibold touch-manipulation text-base-content/50 active:text-error active:bg-error/10"
+            class="min-h-11 px-3 rounded-xl text-xs font-semibold touch-manipulation text-base-content/50 active:text-error active:bg-error/10"
             (click)="clearHistory()"
           >
             Clear
@@ -45,6 +45,7 @@
   <div class="relative -mx-1">
     <app-song-list
       [songs]="songs()"
+      [columns]="true"
       emptyStateTitle="No listens yet"
       emptyStateDescription="Play something — your last 50 tracks show up here."
       (playlistChange)="onChangePlaylist()"

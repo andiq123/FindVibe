@@ -23,7 +23,7 @@ const (
 	/** Radio wants a longer same-vibe batch so the queue doesn't pivot every extend. */
 	radioResolveCap = 12
 	/** Album play only needs a short queue to start — full resolve burns the gateway budget. */
-	albumResolveCap = 4
+	albumResolveCap     = 4
 	recommendSearchPeek = 8
 	recommendTTL        = 6 * time.Hour
 	recommendCacheCap   = 64
@@ -32,8 +32,8 @@ const (
 
 	// ponytail: region hard-coded until settings grow a country picker
 	exploreCountry  = "Romania"
-	exploreTTL      = 24 * time.Hour
-	exploreCacheAge = "86400" // Cache-Control max-age for fresh chart payloads
+	exploreTTL      = 6 * time.Hour
+	exploreCacheAge = "21600" // Cache-Control max-age for fresh chart payloads
 	// Smaller shelves → faster first paint when streaming section-by-section.
 	exploreCap   = 8
 	exploreFetch = 12
@@ -288,7 +288,7 @@ func (h *RecommendHandler) GetRecommend(c fiber.Ctx) error {
 			pairs = append(pairs[off:], pairs[:off]...)
 		}
 
-		songs := h.resolveN(ctx, pairs, seed, capN, refresh, false)
+		songs := h.resolveN(ctx, pairs, seed, capN, refresh, radio)
 		// ponytail: Last.fm often misses collab credits — fall back to our search by artist name.
 		if len(songs) == 0 {
 			songs = h.searchFallback(ctx, artists, seed)
@@ -411,7 +411,7 @@ func (h *RecommendHandler) collectPairs(ctx context.Context, seed lastfmPair, ar
 	for _, a := range artists {
 		similar, err := h.lastfmSimilar(ctx, a, seed.title)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		pairs = uniquePairs(append(pairs, similar...), seed)
 		if len(pairs) >= pairCap {
@@ -425,7 +425,7 @@ func (h *RecommendHandler) collectPairs(ctx context.Context, seed lastfmPair, ar
 		}
 		extra, err := h.pairsFromSimilarArtists(ctx, a, seed.title)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		pairs = uniquePairs(append(pairs, extra...), seed)
 	}
@@ -436,7 +436,7 @@ func (h *RecommendHandler) collectPairs(ctx context.Context, seed lastfmPair, ar
 		}
 		tops, err := h.lastfmArtistTop(ctx, a, seed.title)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		pairs = uniquePairs(append(pairs, tops...), seed)
 	}
@@ -528,7 +528,7 @@ func (h *RecommendHandler) searchFallback(ctx context.Context, artists []string,
 		}
 		for _, s := range resp.Songs {
 			k := songKey(s.Artist, s.Title)
-			if k == "" || seen[k] || s.Link == "" {
+			if k == "" || seen[k] || !services.IsPlayableMatch(a, coreTitle(s.Title), s) {
 				continue
 			}
 			seen[k] = true

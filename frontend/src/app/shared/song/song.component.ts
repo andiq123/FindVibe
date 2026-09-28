@@ -13,7 +13,6 @@ import {
 } from "../../core/models/song.model";
 import { PlayerStatus } from "../../features/player/models/player.model";
 import { PlayerButtonComponent } from "../player-button/player-button.component";
-import { MovingTitleComponent } from "../moving-title/moving-title.component";
 import { NgTemplateOutlet } from "@angular/common";
 import { FavoriteButtonComponent } from "../favorite-button/favorite-button.component";
 import { FontAwesomeModule } from "@fortawesome/angular-fontawesome";
@@ -36,7 +35,6 @@ import {
   standalone: true,
   imports: [
     PlayerButtonComponent,
-    MovingTitleComponent,
     FavoriteButtonComponent,
     FontAwesomeModule,
     DragAndDropDirective,

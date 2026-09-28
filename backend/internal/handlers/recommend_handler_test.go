@@ -315,9 +315,10 @@ func TestResolveRefreshBypassesCache(t *testing.T) {
 
 func TestStreamProxyAllowedHosts(t *testing.T) {
 	allow := []string{
-		"https://cs1.mp3.pm/listen/a.mp3",
-		"https://mn1.sunproxy.net/file/abc/x.mp3",
-		"https://musify.club/track/pl/1/x.mp3",
+		"https://new.kachevo.org/get/music/a.mp3",
+		"https://eu.hitmoz.com/get/music/a.mp3",
+		"https://ds2.deliciousbananas.com/get/music/a.mp3",
+		"https://s3.deliciouspeaches.com/get/music/a.mp3",
 	}
 	for _, raw := range allow {
 		u, err := url.Parse(raw)
@@ -328,6 +329,12 @@ func TestStreamProxyAllowedHosts(t *testing.T) {
 	deny := []string{
 		"http://cs1.mp3.pm/listen/a.mp3",
 		"https://evil.example/a.mp3",
+		"https://cs1.mp3.pm/listen/a.mp3",
+		"https://musify.club/track/pl/1/x.mp3",
+		"https://new.kachevo.org.evil.test/get/music/a.mp3",
+		"https://new.kachevo.org/admin",
+		"https://deliciousbananas.com.evil.test/get/music/a.mp3",
+		"https://evildeliciouspeaches.com/get/music/a.mp3",
 		"https://mp3.pm.evil.com/a.mp3",
 	}
 	for _, raw := range deny {
@@ -381,5 +388,17 @@ func TestRecommendCacheRoundTrip(t *testing.T) {
 	again, _ := h.recommendSnap(key)
 	if again[0].Link != "https://d.mp3" {
 		t.Fatalf("cache poisoned: %q", again[0].Link)
+	}
+}
+
+func TestArtistFallbackRejectsUnrelatedAndTransformedTracks(t *testing.T) {
+	h := &RecommendHandler{search: stubSearch{hits: map[string][]domain.Song{"adele": {
+		{Artist: "NotAdele", Title: "Other", Link: "https://audio.test/wrong"},
+		{Artist: "Adele", Title: "Hello (Nightcore Remix)", Link: "https://audio.test/remix"},
+		{Artist: "Adele", Title: "Someone Like You", Link: "https://audio.test/good"},
+	}}}}
+	got := h.searchFallback(context.Background(), []string{"Adele"}, lastfmPair{artist: "Adele", title: "Hello"})
+	if len(got) != 1 || got[0].Title != "Someone Like You" {
+		t.Fatalf("unsafe fallback: %+v", got)
 	}
 }
