@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,9 +19,7 @@ import (
 const (
 	searchCacheTTL = 2 * time.Minute
 	searchCacheCap = 256
-	// Oversample Last.fm so provider mapping attrition still fills MaxResults.
-	searchCatalogOversample = 2
-	searchMapPeek           = 8
+	searchMapPeek  = 8
 )
 
 type searchCacheEntry struct {
@@ -30,20 +27,10 @@ type searchCacheEntry struct {
 	at   time.Time
 }
 
-// catalogSearcher is Last.fm discovery (tests inject a stub).
-type catalogSearcher interface {
-	Configured() bool
-	Search(ctx context.Context, query string, page, limit int) (CatalogPage, error)
-	TopAlbums(ctx context.Context, artist string, limit, page int) ([]domain.ArtistAlbum, *domain.PaginationInfo, error)
-	AlbumSearch(ctx context.Context, query string, limit int) ([]domain.ArtistAlbum, error)
-}
-
 type SearchService struct {
 	providers     []ports.IMusicProvider
 	config        *domain.SearchConfig
 	searchTimeout time.Duration
-	catalog       catalogSearcher
-	covers        *CoverService
 
 	cacheMu sync.Mutex
 	cache   map[string]searchCacheEntry
@@ -54,7 +41,6 @@ func NewSearchService(
 	providers []ports.IMusicProvider,
 	config *domain.SearchConfig,
 	timeout time.Duration,
-	catalog catalogSearcher,
 ) *SearchService {
 	if config == nil {
 		config = domain.DefaultSearchConfig()
@@ -67,25 +53,16 @@ func NewSearchService(
 		providers:     providers,
 		config:        config,
 		searchTimeout: timeout,
-		catalog:       catalog,
 		cache:         make(map[string]searchCacheEntry),
 	}
 }
 
-// SetCovers wires artwork lookup used while mapping (parallel per hit; does not stall the stream).
-func (ss *SearchService) SetCovers(covers *CoverService) {
-	if ss == nil {
-		return
-	}
-	ss.covers = covers
-}
-
-// Search: Last.fm discovers songs/artists → providers map playable URLs → only successful maps.
+// Search queries the music providers directly.
 func (ss *SearchService) Search(ctx context.Context, query string, page int) (*domain.SearchResponse, error) {
 	return ss.SearchWithProgress(ctx, query, page, nil, nil)
 }
 
-// SearchWithProgress streams discovery meta, then each mapped song as soon as it succeeds.
+// SearchWithProgress emits each provider batch as soon as it arrives.
 func (ss *SearchService) SearchWithProgress(
 	ctx context.Context,
 	query string,
@@ -93,9 +70,6 @@ func (ss *SearchService) SearchWithProgress(
 	onMeta func(domain.SearchProgress) error,
 	onSong func(domain.Song) error,
 ) (*domain.SearchResponse, error) {
-	if ss.catalog == nil || !ss.catalog.Configured() {
-		return nil, fmt.Errorf("search: %w", domain.ErrUnavailable)
-	}
 	if len(ss.providers) == 0 {
 		return domain.NewSearchResponse([]domain.Song{}, nil), nil
 	}
@@ -177,235 +151,74 @@ func (ss *SearchService) emitCached(
 }
 
 func (ss *SearchService) searchUncached(
-	ctx context.Context,
-	text string,
-	page int,
-	onMeta func(domain.SearchProgress) error,
-	onSong func(domain.Song) error,
+	ctx context.Context, text string, page int,
+	onMeta func(domain.SearchProgress) error, onSong func(domain.Song) error,
 ) (*domain.SearchResponse, error) {
-	maxResults := ss.config.MaxResults
-	if maxResults <= 0 {
-		maxResults = constants.DefaultMaxSearchResults
+	ctx, cancel := context.WithTimeout(ctx, ss.searchTimeout)
+	defer cancel()
+	type batch struct {
+		rows []domain.ProviderResult
+		err  error
 	}
-	limit := maxResults * searchCatalogOversample
-	if limit < maxResults {
-		limit = maxResults
+	ch := make(chan batch, len(ss.providers))
+	for _, provider := range ss.providers {
+		go func(p ports.IMusicProvider) {
+			rows, err := p.SearchWithPage(ctx, text, page)
+			ch <- batch{rows, err}
+		}(provider)
 	}
-
-	pageData, err := ss.catalog.Search(ctx, text, page, limit)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := domain.NewSearchResponse(nil, pageData.Pagination)
-	if page == 1 && len(pageData.Artists) > 0 {
-		resp.Artists = make([]domain.SearchArtist, 0, len(pageData.Artists))
-		for _, a := range pageData.Artists {
-			resp.Artists = append(resp.Artists, domain.SearchArtist{Name: a.Name, Image: a.Image})
+	pagination := &domain.PaginationInfo{CurrentPage: page, HasPrevPage: page > 1}
+	resp := domain.NewSearchResponse([]domain.Song{}, pagination)
+	seen := map[string]bool{}
+	successes := 0
+	for range ss.providers {
+		var result batch
+		select {
+		case result = <-ch:
+		case <-ctx.Done():
+			if len(resp.Songs) > 0 {
+				return resp, nil
+			}
+			return resp, ctx.Err()
 		}
-	}
-
-	streaming := onMeta != nil || onSong != nil
-	if streaming {
-		// First paint immediately — do not wait on album Last.fm or covers.
+		if result.err != nil {
+			continue
+		}
+		successes++
+		for _, row := range result.rows {
+			if p := row.Pagination; p != nil {
+				pagination.HasNextPage = pagination.HasNextPage || p.HasNextPage
+				pagination.TotalPages = max(pagination.TotalPages, p.TotalPages)
+				pagination.TotalResults = max(pagination.TotalResults, p.TotalResults)
+			}
+		}
+		limit := ss.config.MaxResults
+		if limit <= 0 {
+			limit = constants.DefaultMaxSearchResults
+		}
+		for _, song := range playableSongs(result.rows, limit) {
+			// Keep alternate providers/versions available, but never duplicate a URL.
+			if seen[song.Link] {
+				continue
+			}
+			seen[song.Link] = true
+			resp.Songs = append(resp.Songs, song)
+			if onSong != nil {
+				if err := onSong(song); err != nil {
+					return resp, err
+				}
+			}
+		}
 		if onMeta != nil {
-			if err := onMeta(domain.SearchProgress{
-				Artists:    append([]domain.SearchArtist(nil), resp.Artists...),
-				Pagination: resp.Pagination,
-			}); err != nil {
+			if err := onMeta(domain.SearchProgress{Pagination: pagination}); err != nil {
 				return resp, err
 			}
 		}
-
-		var albums []domain.ArtistAlbum
-		var albumWG sync.WaitGroup
-		if page == 1 {
-			albumWG.Add(1)
-			go func() {
-				defer albumWG.Done()
-				albums = ss.gatherAlbums(ctx, text, pageData.Artists)
-			}()
-		}
-
-		resp.Songs = ss.mapCatalogHits(ctx, pageData.Hits, maxResults, onSong)
-
-		albumWG.Wait()
-		resp.Albums = albums
-		if onMeta != nil && len(albums) > 0 {
-			_ = onMeta(domain.SearchProgress{Albums: append([]domain.ArtistAlbum(nil), albums...)})
-		}
-		return resp, nil
 	}
-
-	if page == 1 {
-		resp.Albums = ss.gatherAlbums(ctx, text, pageData.Artists)
+	if successes == 0 {
+		return resp, domain.ErrUnavailable
 	}
-	resp.Songs = ss.mapCatalogHits(ctx, pageData.Hits, maxResults, nil)
 	return resp, nil
-}
-
-// gatherAlbums merges album.search (query) with top artist's top albums; prefers rows with art.
-func (ss *SearchService) gatherAlbums(ctx context.Context, query string, artists []CatalogArtist) []domain.ArtistAlbum {
-	var searched, tops []domain.ArtistAlbum
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		searched, _ = ss.catalog.AlbumSearch(ctx, query, catalogAlbumsForTopArtist)
-	}()
-	if len(artists) > 0 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			tops, _, _ = ss.catalog.TopAlbums(ctx, artists[0].Name, catalogAlbumsForTopArtist, 1)
-		}()
-	}
-	wg.Wait()
-	return mergeDiscoveryAlbums(searched, tops, catalogAlbumsForTopArtist)
-}
-
-func mergeDiscoveryAlbums(searched, tops []domain.ArtistAlbum, limit int) []domain.ArtistAlbum {
-	if limit < 1 {
-		limit = catalogAlbumsForTopArtist
-	}
-	seen := map[string]int{} // key → index in out
-	out := make([]domain.ArtistAlbum, 0, limit)
-
-	add := func(a domain.ArtistAlbum) {
-		name := strings.TrimSpace(a.Name)
-		if name == "" || strings.EqualFold(name, "(null)") || strings.EqualFold(name, "null") {
-			return
-		}
-		artist := strings.TrimSpace(a.Artist)
-		key := utils.NormalizeString(artist) + "|" + utils.NormalizeString(name)
-		if key == "|" {
-			return
-		}
-		if i, ok := seen[key]; ok {
-			// Upgrade stub/empty art when a later source has a real image.
-			if strings.TrimSpace(out[i].Image) == "" && strings.TrimSpace(a.Image) != "" {
-				out[i].Image = a.Image
-			}
-			if a.Playcount > out[i].Playcount {
-				out[i].Playcount = a.Playcount
-			}
-			return
-		}
-		if len(out) >= limit {
-			return
-		}
-		seen[key] = len(out)
-		out = append(out, a)
-	}
-
-	for _, a := range searched {
-		add(a)
-	}
-	for _, a := range tops {
-		add(a)
-	}
-
-	// Stable: albums with cover art first so the rail looks filled.
-	sort.SliceStable(out, func(i, j int) bool {
-		hi := strings.TrimSpace(out[i].Image) != ""
-		hj := strings.TrimSpace(out[j].Image) != ""
-		if hi != hj {
-			return hi
-		}
-		return false
-	})
-	return out
-}
-
-// mapCatalogHits resolves Last.fm rows through providers; emits each success immediately.
-func (ss *SearchService) mapCatalogHits(
-	ctx context.Context,
-	hits []CatalogHit,
-	capN int,
-	onSong func(domain.Song) error,
-) []domain.Song {
-	if capN < 1 || len(hits) == 0 {
-		return nil
-	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	type slot struct {
-		song domain.Song
-		ok   bool
-	}
-	ch := make(chan slot, len(hits))
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, constants.DefaultResolveConcurrency)
-
-	for _, hit := range hits {
-		wg.Add(1)
-		go func(hit CatalogHit) {
-			defer wg.Done()
-			select {
-			case sem <- struct{}{}:
-				defer func() { <-sem }()
-			case <-ctx.Done():
-				ch <- slot{}
-				return
-			}
-			song, ok := ss.mapOne(ctx, hit)
-			ch <- slot{song: song, ok: ok}
-		}(hit)
-	}
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-
-	seen := map[string]struct{}{}
-	out := make([]domain.Song, 0, capN)
-	for s := range ch {
-		if !s.ok {
-			continue
-		}
-		k := SongKey(s.song.Artist, s.song.Title)
-		if k == "" {
-			continue
-		}
-		if _, dup := seen[k]; dup {
-			continue
-		}
-		seen[k] = struct{}{}
-		out = append(out, s.song)
-		if onSong != nil {
-			if err := onSong(s.song); err != nil {
-				cancel()
-				return out
-			}
-		}
-		if len(out) >= capN {
-			cancel()
-			for range ch {
-			}
-			return out
-		}
-	}
-	return out
-}
-
-func (ss *SearchService) mapOne(ctx context.Context, hit CatalogHit) (domain.Song, bool) {
-	songs, err := ss.SearchFirst(ctx, hit.Artist+" "+hit.Title, searchMapPeek)
-	if err != nil || len(songs) == 0 {
-		return domain.Song{}, false
-	}
-	song, ok := PickPlayableSong(hit.Artist, hit.Title, songs, "", searchMapPeek)
-	if !ok {
-		return domain.Song{}, false
-	}
-	// Prefer catalog art; never wait on Lookup — stream emits now, client fills via /cover.
-	if img := hit.Image; hasRealCover(img) {
-		song.Image = img
-	} else if !hasRealCover(song.Image) {
-		song.Image = ""
-	}
-	return song, true
 }
 
 // SearchFirst fans out by priority and returns as soon as the best available

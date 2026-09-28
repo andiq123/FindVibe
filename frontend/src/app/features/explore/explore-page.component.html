@@ -1,38 +1,40 @@
 <app-page-content>
-  <div class="explore space-y-4 sm:space-y-5 pt-1">
+  <div class="explore pt-1">
 
-    <div class="explore-header flex items-end justify-between gap-3">
-      <div class="min-w-0">
-        <span
-          class="text-[10px] font-bold text-base-content/50 uppercase tracking-[0.18em]"
+    <div class="explore-toolbar">
+      <div class="explore-header flex items-end justify-between gap-3">
+        <div class="min-w-0">
+          <span
+            class="text-[10px] font-bold text-base-content/50 uppercase tracking-[0.18em]"
+          >
+            @if (explore.forYou()) {
+              For you · {{ explore.country() }}
+            } @else {
+              Charts · {{ explore.country() }}
+            }
+          </span>
+          <h1
+            class="discovery-heading"
+          >
+            Explore
+          </h1>
+        </div>
+        <button
+          type="button"
+          class="explore-refresh"
+          (click)="onRefresh()"
+          [disabled]="explore.loading()"
+          aria-label="Refresh charts"
         >
-          @if (explore.forYou()) {
-            For you · {{ explore.country() }}
-          } @else {
-            Charts · {{ explore.country() }}
-          }
-        </span>
-        <h1
-          class="discovery-heading"
-        >
-          Explore
-        </h1>
+          <fa-icon
+            [icon]="faArrowRotateRight"
+            [class.animate-spin]="explore.loading()"
+          />
+        </button>
       </div>
-      <button
-        type="button"
-        class="explore-refresh"
-        (click)="onRefresh()"
-        [disabled]="explore.loading()"
-        aria-label="Refresh charts"
-      >
-        <fa-icon
-          [icon]="faArrowRotateRight"
-          [class.animate-spin]="explore.loading()"
-        />
-      </button>
-    </div>
 
-    <app-search-bar />
+      <app-search-bar />
+    </div>
 
     @if (explore.sections()[0]; as featured) {
       @if (featuredSong(); as pick) {

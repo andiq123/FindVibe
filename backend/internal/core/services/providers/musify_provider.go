@@ -22,7 +22,7 @@ var musifyPace = newPacer(120 * time.Millisecond)
 type MusifyProvider struct{ *BaseProvider }
 
 func NewMusifyProvider(client *http.Client) *MusifyProvider {
-	return &MusifyProvider{BaseProvider: NewBaseProvider("Musify", 6, client)}
+	return &MusifyProvider{BaseProvider: NewBaseProvider("Musify", 8, client)}
 }
 
 func (p *MusifyProvider) UseRotator(r proxyRotator) *MusifyProvider {

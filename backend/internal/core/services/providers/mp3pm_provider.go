@@ -31,7 +31,7 @@ var (
 type Mp3pmProvider struct{ *BaseProvider }
 
 func NewMp3pmProvider(client *http.Client) *Mp3pmProvider {
-	return &Mp3pmProvider{BaseProvider: NewBaseProvider("Mp3pm", 8, client)}
+	return &Mp3pmProvider{BaseProvider: NewBaseProvider("Mp3pm", 5, client)}
 }
 
 func (p *Mp3pmProvider) UseRotator(r proxyRotator) *Mp3pmProvider {

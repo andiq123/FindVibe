@@ -28,7 +28,7 @@ Ctrl-C stops both apps and removes the database container, retaining its named
 volume. Docker Desktop stays running. Occupied ports cause an error rather than
 stopping another project. Startup errors return a nonzero exit status.
 
-Search, discovery and recommendations require a Last.fm key. Add `LASTFM_API_KEY` to `backend/.env` and
+Search queries music providers directly without a Last.fm key. Discovery and recommendations require a Last.fm key. Add `LASTFM_API_KEY` to `backend/.env` and
 restart. Secrets are ignored by Git. The launcher explicitly sets local database
 and API settings; it does not use a production database.
 

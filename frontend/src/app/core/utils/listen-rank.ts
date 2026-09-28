@@ -96,3 +96,20 @@ export function pickVaultRadioSeed(
   }
   return pick ?? null;
 }
+
+/** Recent listening drives discovery; old heavy rotation decays over a week. */
+export function recommendationSeeds(recents: Song[], favorites: Song[], stats: ListenStats, now = Date.now()): Song[] {
+  const recentIndex = new Map(recents.map((s, i) => [songKey(s), i]));
+  const liked = new Set(favorites.map(songKey));
+  const unique = new Map<string, Song>();
+  for (const s of [...recents, ...favorites]) if (!unique.has(songKey(s))) unique.set(songKey(s), s);
+  const score = (s: Song) => {
+    const index = recentIndex.get(songKey(s));
+    const stat = stats[s.link];
+    const age = Math.max(0, now - (stat?.lastAt ?? 0)) / DAY_MS;
+    return (index === undefined ? 0 : 6 / (1 + index / 3)) +
+      (liked.has(songKey(s)) ? 1 : 0) +
+      Math.log1p((stat?.plays ?? 0) + (stat?.ms ?? 0) / 180_000) * Math.pow(0.5, age / 7);
+  };
+  return [...unique.values()].sort((a, b) => score(b) - score(a));
+}

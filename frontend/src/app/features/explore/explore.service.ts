@@ -1,14 +1,14 @@
-import { Injectable, computed, inject, signal } from "@angular/core";
+import { Injectable, computed, effect, untracked, inject, signal } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { firstValueFrom } from "rxjs";
 import { Song, songKey } from "../../core/models/song.model";
 import { environment } from "../../../environments/environment";
 import { LibraryService } from "../library/services/library.service";
 import { StorageService } from "../../core/services/storage.service";
-import { rankByListen, rotateIndex } from "../../core/utils/listen-rank";
+import { rankByListen, recommendationSeeds } from "../../core/utils/listen-rank";
 
 /** Client-only shelf ids — never passed back into Fiber chart merge. */
-const LOCAL_SHELF = new Set(["vault", "recents", "because", "because2"]);
+const LOCAL_SHELF = new Set(["vault", "recents", "because", "because2", "popular"]);
 const BECAUSE_KEY = "exploreBecause";
 const CHARTS_KEY = "exploreCharts";
 /** Match Fiber exploreTTL / recommendTTL. */
@@ -96,6 +96,18 @@ export class ExploreService {
   private becauseFetchGen = 0;
   /** Manual refresh bumps seed rotation within the same day. */
   private seedBump = 0;
+
+  constructor() {
+    effect((onCleanup) => {
+      this.storage.recentSongs();
+      this.library.songs();
+      // Coalesce library updates; don't refetch on each playback-time tick.
+      const timer = setTimeout(() => untracked(() => {
+        if (this.loaded) void this.load();
+      }), 600);
+      onCleanup(() => clearTimeout(timer));
+    });
+  }
 
   /**
    * Paint from disk instantly, then revalidate /explore in the background.
@@ -213,6 +225,10 @@ export class ExploreService {
       const slot = this.becauseSlots[i];
       if (slot?.songs.length) head.push(slot);
     }
+    const familiar = new Set([...this.storage.recentSongs().slice(0, 30), ...this.library.songs()].map(s => s.artist.trim().toLowerCase()));
+    const popular = charts.flatMap(section => section.songs.map((song, rank) => ({ song, score: 1 / (rank + 1) + (familiar.has(song.artist.trim().toLowerCase()) ? 1 : 0) })))
+      .sort((a, b) => b.score - a.score).map(item => item.song);
+    if (popular.length) head.push({ id: "popular", title: "Popular for you", subtitle: "Chart favorites · your artists", songs: takeUnique(popular, 10) });
     const day = Math.floor(Date.now() / DAY_MS);
     const vault = rankByListen(
       this.library.songs(),
@@ -254,23 +270,15 @@ export class ExploreService {
   /**
    * Rotate seed daily across vault; slot 1 picks a different seed.
    */
-  private pickSeedSong(slot: number, excludeKeys: Set<string>): Song | null {
-    const day = Math.floor(Date.now() / DAY_MS);
-    const vault = this.library.songs();
-    const pool = vault.length
-      ? rankByListen(vault, this.storage.listenStats(), day)
-      : takeUnique(this.storage.recentSongs(), 50);
+  private pickSeedSong(_slot: number, excludeKeys: Set<string>): Song | null {
+    const pool = recommendationSeeds(this.storage.recentSongs(), this.library.songs(), this.storage.listenStats());
     if (!pool.length) return null;
-
-    for (let attempt = 0; attempt < pool.length; attempt++) {
-      const idx = rotateIndex(pool.length, day, this.seedBump + slot * 5 + attempt);
-      const pick = pool[idx];
-      if (!pick?.artist?.trim() || !pick?.title?.trim()) continue;
-      const key = this.seedKeyOf(pick);
-      if (excludeKeys.has(key)) continue;
-      return pick;
-    }
-    return null;
+    const excludedArtists = new Set(pool.filter(s => excludeKeys.has(this.seedKeyOf(s))).map(s => s.artist.trim().toLowerCase()));
+    // Rotate within the current taste pool only when explicitly refreshed.
+    const start = this.seedBump % Math.min(pool.length, 8);
+    const rotated = [...pool.slice(start), ...pool.slice(0, start)];
+    const eligible = rotated.filter(s => s.artist?.trim() && s.title?.trim() && !excludeKeys.has(this.seedKeyOf(s)));
+    return eligible.find(s => !excludedArtists.has(s.artist.trim().toLowerCase())) ?? eligible[0] ?? null;
   }
 
   private hydrateBecauseFromCache(): void {
@@ -369,7 +377,7 @@ export class ExploreService {
 
       const section: ExploreSection = {
         id: this.slotId(slot),
-        title: `Because you liked ${seed.title}`,
+        title: `More like ${seed.title}`,
         subtitle: seed.artist,
         songs: songs.slice(0, BECAUSE_RAIL),
         seedSong: seed,

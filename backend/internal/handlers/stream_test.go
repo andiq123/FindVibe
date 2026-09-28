@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/andiq123/FindVibeFiber/internal/core/domain"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -88,5 +89,39 @@ func TestStreamRejectsRedirectOutsideProviders(t *testing.T) {
 	}
 	if err == nil || calls != 1 {
 		t.Fatalf("redirect followed: calls=%d err=%v", calls, err)
+	}
+}
+
+func TestStreamRecoversThroughAnotherProvider(t *testing.T) {
+	dead := "https://cs1.mp3.pm/dead.mp3"
+	good := "https://musify.club/good.mp3"
+	calls := []string{}
+	client := &http.Client{Transport: streamTransport(func(r *http.Request) (*http.Response, error) {
+		calls = append(calls, r.URL.String())
+		status, ct, body := 404, "text/html", "unavailable"
+		if r.URL.String() == good {
+			status, ct, body = 206, "audio/mpeg", "audio"
+		}
+		return &http.Response{StatusCode: status, Header: http.Header{"Content-Type": {ct}}, Body: io.NopCloser(strings.NewReader(body)), ContentLength: int64(len(body))}, nil
+	})}
+	search := stubSearch{hits: map[string][]domain.Song{"adele hello": {
+		{Artist: "Adele", Title: "Hello", Link: dead},
+		{Artist: "Other", Title: "Wrong", Link: "https://musify.club/wrong.mp3"},
+		{Artist: "Adele", Title: "Hello", Link: good},
+	}}}
+	h := NewRecommendHandlerUpstream(client, client, "", search, nil)
+	app := fiber.New()
+	app.Get("/stream", h.GetStream)
+	resp, err := app.Test(httptest.NewRequest("GET", "/stream?artist=Adele&title=Hello&link="+url.QueryEscape(dead), nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 206 || string(body) != "audio" || len(calls) != 2 || calls[1] != good {
+		t.Fatalf("recovery: %v %s", calls, body)
+	}
+	if cached, ok := h.resolveSnap(songKey("Adele", "Hello")); !ok || cached.Link != good {
+		t.Fatal("working URL not cached")
 	}
 }

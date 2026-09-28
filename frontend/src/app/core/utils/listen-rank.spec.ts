@@ -1,5 +1,6 @@
 import {
   rankByListen,
+  recommendationSeeds,
   rotateIndex,
   pickVaultRadioSeed,
   ListenStats,
@@ -53,5 +54,18 @@ describe("listen-rank", () => {
     const b = pickVaultRadioSeed(songs, stats, 1, songKey(a!));
     expect(b).toBeTruthy();
     expect(b!.link).not.toBe(a!.link);
+  });
+});
+
+describe("recommendationSeeds", () => {
+  it("includes recent tracks even with a populated vault, and decays old favorites", () => {
+    const now = Date.now();
+    const recent = song(1), old = song(2);
+    const ranked = recommendationSeeds([recent], [old], {[old.link]: {ms: 100_000_000, plays: 1000, lastAt: now - 90 * 86_400_000}}, now);
+    expect(ranked[0]).toEqual(recent);
+    expect(ranked.length).toBe(2);
+  });
+  it("deduplicates tracks shared by recents and favorites", () => {
+    expect(recommendationSeeds([song(1)], [song(1)], {}).length).toBe(1);
   });
 });

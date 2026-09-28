@@ -3,9 +3,11 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"github.com/andiq123/FindVibeFiber/internal/core/services"
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -54,16 +56,58 @@ func (h *RecommendHandler) GetStream(c fiber.Ctx) error {
 		if resp != nil {
 			resp.Body.Close()
 		}
-		fresh, freshed := h.resolveOne(ctx, want, lastfmPair{}, true)
-		if !freshed || strings.TrimSpace(fresh.Link) == "" || fresh.Link == song.Link {
-			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": "Couldn't fetch stream"})
-		}
-		resp, err = h.openStreamUpstream(ctx, fresh.Link, rng)
-		if err != nil || resp == nil || !validAudioResponse(resp) {
-			if resp != nil {
-				resp.Body.Close()
+		resp = nil
+		// Search all sources and never retry the exact failed URL. Prefer another provider.
+		recoveryCtx, recoveryCancel := context.WithTimeout(ctx, 25*time.Second)
+		defer recoveryCancel()
+		candidates, searchErr := h.search.Search(recoveryCtx, artist+" "+title, 1)
+		if searchErr == nil && candidates != nil {
+			failedURL, _ := url.Parse(song.Link)
+			providerHost := func(link string) string {
+				u, _ := url.Parse(link)
+				if u == nil {
+					return ""
+				}
+				host := u.Hostname()
+				for _, suffix := range []string{"mp3.pm", "musify.club", "mp3mn.net", "sunproxy.net"} {
+					if host == suffix || strings.HasSuffix(host, "."+suffix) {
+						return suffix
+					}
+				}
+				return host
 			}
-			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": "Upstream stream failed"})
+			failedHost := ""
+			if failedURL != nil {
+				failedHost = providerHost(failedURL.String())
+			}
+			sort.SliceStable(candidates.Songs, func(i, j int) bool {
+				return providerHost(candidates.Songs[i].Link) != failedHost && providerHost(candidates.Songs[j].Link) == failedHost
+			})
+			tried := map[string]bool{song.Link: true}
+			attempts := 0
+			for _, candidate := range candidates.Songs {
+				if tried[candidate.Link] || !services.IsPlayableMatch(artist, title, candidate) {
+					continue
+				}
+				tried[candidate.Link] = true
+				attempts++
+				// Use the full stream context so successful audio survives recovery returning.
+				next, openErr := h.openStreamUpstream(ctx, candidate.Link, rng)
+				if openErr == nil && next != nil && validAudioResponse(next) {
+					resp = next
+					h.resolveStore(songKey(artist, title), candidate)
+					break
+				}
+				if next != nil {
+					next.Body.Close()
+				}
+				if attempts >= 4 || recoveryCtx.Err() != nil {
+					break
+				}
+			}
+		}
+		if resp == nil {
+			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": "No working source found"})
 		}
 	}
 

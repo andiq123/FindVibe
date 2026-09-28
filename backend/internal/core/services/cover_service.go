@@ -321,3 +321,55 @@ func fetchItunesCover(ctx context.Context, client *http.Client, q string) string
 	}
 	return strings.Replace(data.Results[0].ArtworkURL100, "100x100", "600x600", 1)
 }
+
+type searchTrackRow struct {
+	Name   string `json:"name"`
+	Artist string `json:"artist"`
+	Image  []struct {
+		URL  string `json:"#text"`
+		Size string `json:"size"`
+	} `json:"image"`
+}
+
+func decodeSearchTracks(raw json.RawMessage) ([]searchTrackRow, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var many []searchTrackRow
+	if err := json.Unmarshal(raw, &many); err == nil {
+		return many, nil
+	}
+	var one searchTrackRow
+	if err := json.Unmarshal(raw, &one); err != nil {
+		return nil, err
+	}
+	if one.Name == "" {
+		return nil, nil
+	}
+	return []searchTrackRow{one}, nil
+}
+
+func bestSearchImage(images []struct {
+	URL  string `json:"#text"`
+	Size string `json:"size"`
+}) string {
+	prefer := []string{"extralarge", "large", "medium", "small"}
+	bySize := make(map[string]string, len(images))
+	var first string
+	for _, im := range images {
+		u := strings.TrimSpace(im.URL)
+		if u == "" || strings.Contains(u, "2a96cbd8b46e442fc41c2b86b821562f") {
+			continue
+		}
+		if first == "" {
+			first = u
+		}
+		bySize[im.Size] = u
+	}
+	for _, size := range prefer {
+		if u := bySize[size]; u != "" {
+			return u
+		}
+	}
+	return first
+}

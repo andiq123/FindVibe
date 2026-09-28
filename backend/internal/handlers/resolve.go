@@ -144,9 +144,16 @@ func (h *RecommendHandler) resolveOne(ctx context.Context, want, seed lastfmPair
 	seedKey := songKey(seed.artist, seed.title)
 	song, ok := services.PickPlayableSong(want.artist, want.title, songs, seedKey, recommendSearchPeek)
 	if !ok {
-		// Never return an unrelated playable hit under this want key — that stamped the wrong
-		// stream URL onto radio/explore/vault rows (UI title ≠ audio).
-		return domain.Song{}, false
+		// A preferred provider can have results without the requested recording.
+		// Check the other sources before declaring a catalog track unavailable.
+		all, err := h.search.Search(ctx, want.artist+" "+want.title, 1)
+		if err != nil || all == nil {
+			return domain.Song{}, false
+		}
+		song, ok = services.PickPlayableSong(want.artist, want.title, all.Songs, seedKey, len(all.Songs))
+		if !ok {
+			return domain.Song{}, false
+		}
 	}
 	h.resolveStore(cacheKey, song)
 	return song, true

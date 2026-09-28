@@ -55,14 +55,11 @@ func InitializeHandlers(db *gorm.DB, cfg *config.AppConfig) Handlers {
 
 	lastfmKey := os.Getenv("LASTFM_API_KEY")
 	covers := services.NewCoverService(httpClient, lastfmKey)
-	catalog := services.NewLastFMCatalog(httpClient, lastfmKey)
 	searchSvc := services.NewSearchService(
 		[]ports.IMusicProvider{mp3pm, mp3mn, musify},
 		searchConfig,
 		cfg.Search.Timeout,
-		catalog,
 	)
-	searchSvc.SetCovers(covers)
 
 	return Handlers{
 		Health:      handlers.NewHealthHandler(scrape.Client),

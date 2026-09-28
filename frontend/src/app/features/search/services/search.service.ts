@@ -54,7 +54,7 @@ export class SearchService {
   readonly currentPage = this._currentPage.asReadonly();
 
   /**
-   * Search songs via Fiber: Last.fm catalog → provider stream map.
+   * Search music providers directly via Fiber, rendering each batch as it arrives.
    * Only successfully mapped playable tracks are returned.
    */
   searchSongs(
