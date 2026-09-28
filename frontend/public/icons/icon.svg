@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FindVibe">
+  <defs>
+    <linearGradient id="fv-bg" x1="12%" y1="8%" x2="92%" y2="96%">
+      <stop offset="0%" stop-color="#2A2838"/>
+      <stop offset="55%" stop-color="#7E6CF7"/>
+      <stop offset="100%" stop-color="#52ACFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#fv-bg)"/>
+  <!-- waveform mark, ~28% padding, 5 bars -->
+  <g fill="#F3F5FB">
+    <rect x="156.2" y="214.5" width="28.7" height="83.0" rx="14.35"/>
+    <rect x="199.6" y="188.3" width="28.7" height="135.4" rx="14.35"/>
+    <rect x="243.0" y="146.7" width="28.7" height="218.6" rx="14.35"/>
+    <rect x="286.4" y="192.7" width="28.7" height="126.6" rx="14.35"/>
+    <rect x="329.8" y="210.1" width="28.7" height="91.8" rx="14.35"/>
+  </g>
+</svg>

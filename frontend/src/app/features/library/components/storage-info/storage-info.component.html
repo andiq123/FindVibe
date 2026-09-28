@@ -1,0 +1,63 @@
+<div class="w-full flex flex-col gap-3">
+  <div class="flex items-start justify-between gap-3">
+    <div class="min-w-0">
+      <h2 class="text-sm font-bold tracking-tight text-base-content">
+        Storage
+      </h2>
+      <p class="text-xs text-base-content/45 mt-0.5 truncate">
+        {{ offlineCount() }}/{{ libraryCount() }} cached ·
+        {{ storageUsed() || "…" }}/{{ storageTotal() || "…" }} GB
+      </p>
+    </div>
+    <span
+      class="shrink-0 text-xs font-semibold tabular-nums text-primary pt-0.5"
+      >{{ progressPercent() | number: "1.0-0" }}%</span
+    >
+  </div>
+
+  <div
+    class="h-1 w-full bg-base-300/50 rounded-full overflow-hidden"
+    aria-label="Vault progress"
+  >
+    <div
+      class="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+      [style.width.%]="progressPercent()"
+    ></div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-2">
+    <button
+      type="button"
+      class="h-10 rounded-xl bg-primary text-primary-content font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50"
+      (click)="downloadAll()"
+      [disabled]="loadingDownloading() || libraryCount() === 0"
+    >
+      @if (loadingDownloading()) {
+        <span class="loading loading-spinner loading-xs"></span>
+      } @else {
+        <fa-icon [icon]="faCloudArrowDown" class="text-[11px]" />
+      }
+      <span>{{ loadingDownloading() ? "Saving…" : "Save all" }}</span>
+    </button>
+
+    <button
+      type="button"
+      class="h-10 rounded-xl border border-error/25 text-error font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-40"
+      (click)="removeCache()"
+      [disabled]="loadingClearing() || !showRemoveCacheButton()"
+    >
+      @if (loadingClearing()) {
+        <span class="loading loading-spinner loading-xs"></span>
+      } @else {
+        <fa-icon [icon]="faTrash" class="text-[11px]" />
+      }
+      <span>{{ loadingClearing() ? "Clearing…" : "Clear" }}</span>
+    </button>
+  </div>
+
+  @if (lastResult()) {
+    <p class="text-center text-[11px] text-base-content/45" role="status">
+      {{ lastResult() }}
+    </p>
+  }
+</div>

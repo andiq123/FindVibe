@@ -1,0 +1,123 @@
+<form
+  (ngSubmit)="submit()"
+  class="flex items-center w-full group relative"
+  style="z-index: var(--z-search-suggestions)"
+>
+  <div class="relative flex-1 group/search">
+    <div
+      class="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-opacity duration-200 z-10 text-base-content/40"
+      [class.opacity-0]="isFocused() && searchTerm().length > 0"
+    >
+      <fa-icon class="text-[17px]" [icon]="faMagnifyingGlass"></fa-icon>
+    </div>
+    <input
+      #searchInput
+      type="search"
+      placeholder="Artists or songs"
+      name="searchTerm"
+      class="w-full h-12 text-[17px] leading-[22px] -tracking-[0.41px] text-base-content pr-11 pl-12 rounded-[1.25rem] border outline-none ring-0 transition-[border-color,background-color,box-shadow] duration-200 ease-out touch-manipulation bg-base-200/80 border-base-content/10"
+      [class.border-primary]="isFocused()"
+      [class.shadow-[0_0_0_2px_color-mix(in_oklab,var(--color-primary)_28%,transparent)]]="isFocused()"
+      [ngModel]="searchTerm()"
+      (input)="onInput($event)"
+      (focus)="isFocused.set(true)"
+      (blur)="isFocused.set(false)"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+      enterkeyhint="search"
+      aria-label="Search for artists or songs"
+      [attr.aria-expanded]="showSuggestions()"
+      [attr.aria-controls]="showSuggestions() ? 'search-suggestions' : null"
+      aria-autocomplete="list"
+      role="combobox"
+    />
+    @if (searchTerm().length > 0) {
+      <button
+        type="button"
+        (mousedown)="$event.preventDefault()"
+        (click)="clearSearch(searchInput)"
+        class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full touch-manipulation active:scale-90"
+        aria-label="Clear search"
+      >
+        <span
+          class="w-5 h-5 rounded-full flex items-center justify-center bg-base-content/25 text-base-100 text-[11px] font-semibold leading-none"
+          >✕</span
+        >
+      </button>
+    }
+  </div>
+
+  <button
+    type="button"
+    (mousedown)="$event.preventDefault()"
+    (click)="cancelSearch()"
+    class="text-[17px] leading-[22px] font-normal text-primary touch-manipulation overflow-hidden whitespace-nowrap transition-all duration-200"
+    [class.w-0]="!showCancel()"
+    [class.opacity-0]="!showCancel()"
+    [class.ml-0]="!showCancel()"
+    [class.w-[54px]]="showCancel()"
+    [class.ml-3]="showCancel()"
+    [class.opacity-100]="showCancel()"
+    aria-label="Cancel search"
+  >
+    Cancel
+  </button>
+
+  @if (showSuggestions()) {
+    <ul
+      id="search-suggestions"
+      role="listbox"
+      class="suggestions-panel absolute top-full left-0 right-0 mt-2 rounded-2xl overflow-hidden border border-base-content/10 max-h-[min(60dvh,22rem)] overflow-y-auto"
+      style="z-index: var(--z-search-suggestions)"
+      aria-label="Search suggestions"
+      [attr.aria-busy]="suggestionsLoading()"
+    >
+      @if (suggestionsLoading() && suggestions().length === 0) {
+        <li
+          class="h-16 flex items-center justify-center"
+          role="status"
+          aria-live="polite"
+        >
+          <span
+            class="loading loading-spinner loading-sm text-primary"
+            aria-label="Loading suggestions"
+          ></span>
+        </li>
+      } @else {
+        @for (suggestion of suggestions(); track suggestion) {
+          <li
+            role="option"
+            class="flex items-stretch border-b border-base-content/[0.06] last:border-0"
+          >
+            <button
+              type="button"
+              class="flex-1 min-w-0 flex items-center gap-3 px-4 py-3 text-left touch-manipulation active:bg-base-content/8"
+              (mousedown)="$event.preventDefault()"
+              (click)="searchBySuggestion(suggestion)"
+            >
+              <fa-icon
+                class="text-sm text-base-content/35 shrink-0"
+                [icon]="faMagnifyingGlass"
+              />
+              <span
+                class="text-[15px] leading-snug truncate text-base-content"
+                >{{ suggestion }}</span
+              >
+            </button>
+            <button
+              type="button"
+              class="w-11 shrink-0 flex items-center justify-center text-base-content/40 touch-manipulation active:bg-base-content/8"
+              (mousedown)="$event.preventDefault()"
+              (click)="fillSuggestion(suggestion, $event)"
+              [attr.aria-label]="'Use suggestion ' + suggestion"
+            >
+              <fa-icon [icon]="faArrowUpLeft" class="-rotate-45 text-xs" />
+            </button>
+          </li>
+        }
+      }
+    </ul>
+  }
+</form>

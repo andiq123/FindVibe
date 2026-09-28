@@ -1,0 +1,13 @@
+<div class="flex h-full items-center justify-center text-sm leading-none">
+  @switch (status()) {
+    @case (playerStatus.Playing) {
+      <fa-icon [icon]="faPause" class="text-[0.95rem]" />
+    }
+    @case (playerStatus.Loading) {
+      <span class="loading loading-spinner loading-xs"></span>
+    }
+    @default {
+      <fa-icon [icon]="faPlay" class="text-[0.95rem] translate-x-px" />
+    }
+  }
+</div>

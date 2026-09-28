@@ -1,0 +1,15 @@
+meta {
+  name: Get Favorites Non-Existent User
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{baseUrl}}/favorites/00000000-0000-0000-0000-000000000000
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+}

@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "name": "FindVibeFiber",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ],
+  "size": 0.004521369934082031,
+  "filesCount": 16,
+  "presets": {
+    "requestType": "http",
+    "requestUrl": "127.0.0.1:8080"
+  }
+}

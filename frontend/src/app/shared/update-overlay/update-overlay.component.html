@@ -1,0 +1,27 @@
+<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-base-100/80 backdrop-blur-xl p-6 animate-[fadeIn_0.6s_cubic-bezier(0.23,1,0.32,1)]" [class.pointer-events-none]="updateLoading()">
+  <div class="relative w-full max-w-xs bg-base-200/80 rounded-[2rem] p-8 text-center overflow-hidden border border-black/40 animate-[scaleUp_0.6s_cubic-bezier(0.34,1.56,0.64,1)]">
+    <!-- Glow Effect -->
+    <div class="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-[radial-gradient(circle_at_center,oklch(var(--color-primary)/0.15)_0%,transparent_50%)] pointer-events-none"></div>
+    <div class="relative z-10">
+      <div class="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mx-auto mb-6 text-primary-content">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </div>
+      <h1 class="text-[22px] font-bold text-base-content mb-2 -tracking-[0.5px]">New Vibe Available</h1>
+      <p class="text-[15px] text-base-content/70 leading-relaxed mb-6">We've polished the experience for you. Updating in <span class="text-base-content font-semibold">{{ secondsToUpdate() }}</span> seconds...</p>
+      <div class="w-full h-1 bg-base-content/10 rounded-full mb-8 overflow-hidden">
+        <div class="h-full bg-base-content transition-[width] duration-1000 ease-linear" [style.width.%]="(secondsToUpdate() / 3) * 100"></div>
+      </div>
+      <button (click)="reloadNow()" class="w-full p-3.5 bg-base-content text-base-100 border-none rounded-2xl text-base font-semibold cursor-pointer transition-all hover:scale-[1.02] hover:opacity-90 active:scale-95 relative">
+        @if (updateLoading()) {
+          <div class="w-5 h-5 border-[3px] border-base-100/10 border-t-base-100 rounded-full mx-auto animate-spin"></div>
+        } @else {
+          Update Now
+        }
+      </button>
+    </div>
+  </div>
+</div>

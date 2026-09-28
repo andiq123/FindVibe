@@ -1,0 +1,20 @@
+meta {
+  name: Authenticate User
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/andiq
+  body: none
+  auth: none
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const body = res.getBody();
+    if (body && body.id) {
+      bru.setVar("userId", body.id);
+    }
+  }
+}

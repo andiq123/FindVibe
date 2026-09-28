@@ -1,0 +1,11 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/health
+  body: json
+  auth: none
+}

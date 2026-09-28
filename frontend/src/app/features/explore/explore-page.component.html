@@ -1,0 +1,165 @@
+<app-page-content>
+  <div class="explore space-y-4 sm:space-y-5 pt-1">
+    <app-search-bar />
+
+    <div class="explore-header flex items-end justify-between gap-3">
+      <div class="min-w-0">
+        <span
+          class="text-[10px] font-bold text-base-content/50 uppercase tracking-[0.18em]"
+        >
+          @if (explore.forYou()) {
+            For you · {{ explore.country() }}
+          } @else {
+            Charts · {{ explore.country() }}
+          }
+        </span>
+        <h1
+          class="font-bold text-[1.65rem] leading-tight tracking-tight bg-gradient-to-br from-base-content via-base-content/95 to-primary/80 bg-clip-text text-transparent"
+        >
+          Explore
+        </h1>
+      </div>
+      <button
+        type="button"
+        class="explore-refresh"
+        (click)="onRefresh()"
+        [disabled]="explore.loading()"
+        aria-label="Refresh charts"
+      >
+        <fa-icon
+          [icon]="faArrowRotateRight"
+          [class.animate-spin]="explore.loading()"
+        />
+      </button>
+    </div>
+
+    @if (explore.needsTaste() && !explore.loading() && explore.sections().length) {
+      <div class="explore-nudge" role="status">
+        <p class="explore-nudge-title">Unlock your taste</p>
+        <p class="explore-nudge-body">
+          Search and save a few tracks — Because shelves and smarter radio light
+          up from your vault.
+        </p>
+        <a routerLink="/songs" class="explore-nudge-cta">Find songs</a>
+      </div>
+    }
+
+    @if (explore.error(); as err) {
+      <app-empty-state
+        [icon]="faTriangleExclamation"
+        title="Couldn't load explore"
+        [description]="err"
+        variant="error"
+      />
+    } @else if (explore.loading() && explore.sections().length === 0) {
+      @for (_ of skeletons; track $index) {
+        <section class="explore-shelf" aria-hidden="true">
+          <div class="explore-shelf-head">
+            <div class="h-3 w-24 rounded bg-base-content/10 animate-pulse"></div>
+            <div class="h-5 w-36 rounded bg-base-content/8 animate-pulse mt-1.5"></div>
+          </div>
+          <div class="explore-rail-wrap">
+            <div class="explore-rail">
+              @for (n of [1, 2, 3, 4]; track n) {
+                <div class="explore-card explore-card--ghost">
+                  <div class="explore-art animate-pulse bg-base-content/8"></div>
+                  <div class="h-3 w-[85%] rounded bg-base-content/8 animate-pulse mt-2.5"></div>
+                  <div class="h-2.5 w-[55%] rounded bg-base-content/6 animate-pulse mt-1.5"></div>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      }
+    } @else if (explore.sections().length === 0) {
+      <app-empty-state
+        [icon]="faCompass"
+        title="No charts yet"
+        description="Tap refresh to pull Romania and worldwide shelves."
+      />
+    } @else {
+      @for (section of explore.sections(); track section.id) {
+        <section
+          class="explore-shelf explore-shelf-in"
+          [style.--i]="$index"
+          [attr.aria-label]="section.title"
+        >
+          <div class="explore-shelf-head">
+            <div class="explore-shelf-head-row">
+              <div class="min-w-0 flex-1">
+                <p class="explore-kicker">{{ section.subtitle }}</p>
+                <h2 class="explore-title">
+                  @if (section.seedSong; as seed) {
+                    @if (section.id === "vault") {
+                      {{ section.title }}
+                    } @else {
+                      Because you liked
+                      <button
+                        type="button"
+                        class="explore-title-seed"
+                        (click)="playSeed(seed)"
+                        [attr.aria-label]="
+                          'Play ' + seed.title + ' by ' + seed.artist
+                        "
+                      >
+                        {{ seed.title }}
+                      </button>
+                    }
+                  } @else {
+                    {{ section.title }}
+                  }
+                </h2>
+              </div>
+              @if (section.radio && (section.seedSong || section.songs[0])) {
+                <button
+                  type="button"
+                  class="explore-shelf-radio"
+                  (click)="startShelfRadio(section, $event)"
+                  [disabled]="radio.loading()"
+                  [attr.aria-label]="'Start radio from ' + section.title"
+                >
+                  @if (radioBusy(section)) {
+                    <span class="loading loading-spinner loading-xs"></span>
+                  } @else {
+                    <fa-icon [icon]="faWaveSquare" class="text-[11px]" />
+                  }
+                  Radio
+                </button>
+              }
+            </div>
+          </div>
+          <div class="explore-rail-wrap">
+            <div class="explore-rail" role="list">
+              @for (song of section.songs; track song.link) {
+                <button
+                  type="button"
+                  class="explore-card explore-card-in"
+                  [style.--c]="$index"
+                  role="listitem"
+                  (click)="playFromShelf(section, song)"
+                  [attr.aria-label]="
+                    'Play ' + song.title + ' by ' + song.artist
+                  "
+                >
+                  <div class="explore-art">
+                    <img
+                      [src]="cover(song)"
+                      [alt]="''"
+                      width="140"
+                      height="140"
+                      loading="lazy"
+                      decoding="async"
+                      draggable="false"
+                    />
+                  </div>
+                  <span class="explore-card-title">{{ song.title }}</span>
+                  <span class="explore-card-artist">{{ song.artist }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        </section>
+      }
+    }
+  </div>
+</app-page-content>

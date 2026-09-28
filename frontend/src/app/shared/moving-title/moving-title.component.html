@@ -1,0 +1,24 @@
+<div class="marquee-wrapper" #container [class.is-overflowing]="isOverflowing()">
+  <div 
+    class="marquee-content" 
+    #content 
+    [class.anim-marquee]="isOverflowing() && isActive()"
+    [style.animation-duration]="animationDuration() + 's'"
+  >
+    <span 
+      [class]="classes()"
+      [style.font-size]="fontSize()"
+      [style.color]="color()"
+      [style.font-weight]="isBold() ? 'bold' : 'normal'"
+    >{{ title() }}</span>
+    @if (isOverflowing()) {
+      <span class="marquee-spacer"></span>
+      <span 
+        [class]="classes()"
+        [style.font-size]="fontSize()"
+        [style.color]="color()"
+        [style.font-weight]="isBold() ? 'bold' : 'normal'"
+      >{{ title() }}</span>
+    }
+  </div>
+</div>

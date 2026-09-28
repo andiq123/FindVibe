@@ -1,0 +1,53 @@
+<app-page-content>
+  <div class="w-full mb-4">
+    <div class="flex items-end gap-3">
+      <div class="flex flex-col min-w-0 flex-1">
+        <span
+          class="text-[10px] font-bold text-base-content/50 uppercase tracking-[0.18em]"
+        >
+          Listening
+        </span>
+        <div class="flex items-baseline gap-2.5 min-w-0">
+          <h1
+            class="font-bold text-2xl tracking-tight bg-gradient-to-br from-base-content via-base-content/95 to-primary/80 bg-clip-text text-transparent truncate"
+          >
+            Recent
+          </h1>
+          @if (songs().length) {
+            <span class="shrink-0 text-xs text-base-content/40 tabular-nums">
+              {{ songs().length }}
+              {{ songs().length === 1 ? "song" : "songs" }}
+            </span>
+          }
+        </div>
+      </div>
+      @if (songs().length) {
+        <div class="shrink-0 ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            class="h-9 px-3 rounded-xl text-xs font-semibold touch-manipulation inline-flex items-center gap-1.5 bg-primary/15 text-primary"
+            (click)="playAll()"
+          >
+            Play all
+          </button>
+          <button
+            type="button"
+            class="h-9 px-3 rounded-xl text-xs font-semibold touch-manipulation text-base-content/50 active:text-error active:bg-error/10"
+            (click)="clearHistory()"
+          >
+            Clear
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="relative -mx-1">
+    <app-song-list
+      [songs]="songs()"
+      emptyStateTitle="No listens yet"
+      emptyStateDescription="Play something — your last 50 tracks show up here."
+      (playlistChange)="onChangePlaylist()"
+    />
+  </div>
+</app-page-content>

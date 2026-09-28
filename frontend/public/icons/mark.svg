@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <!-- monochrome vibe mark for in-app use (currentColor) -->
+  <g fill="currentColor">
+    <rect x="2.5" y="8.8" width="2.8" height="6.4" rx="1.4"/>
+    <rect x="7.1" y="6.2" width="2.8" height="11.6" rx="1.4"/>
+    <rect x="11.6" y="3.2" width="2.8" height="17.6" rx="1.4"/>
+    <rect x="16.1" y="6.8" width="2.8" height="10.4" rx="1.4"/>
+    <rect x="20.6" y="8.4" width="2.8" height="7.2" rx="1.4"/>
+  </g>
+</svg>

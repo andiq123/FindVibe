@@ -1,0 +1,14 @@
+@if (song()){ @if (isMiniPlayer()){
+<app-mini-player
+  (toggleSizeEvent)="onToggleSize()"
+  [song]="song()!"
+  [status]="status()"
+  [progress]="progress()"
+/>
+}@else {
+<app-full-player
+  (toggleSizeEvent)="onToggleSize()"
+  [song]="song()!"
+  [status]="status()"
+/>
+}}

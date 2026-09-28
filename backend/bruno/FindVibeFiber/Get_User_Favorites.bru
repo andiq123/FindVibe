@@ -1,0 +1,21 @@
+meta {
+  name: Get User Favorites
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/favorites/{{userId}}
+  body: json
+  auth: none
+}
+
+body:json {
+   {
+      "id": "21329fae-6108-4592-a6b6-421852ed49b0",
+      "title": "O, Brad Faimos",
+      "artist": "Iuliana Beregoi",
+      "image": "https://lh3.googleusercontent.com/9GX99f89q0Ix42GPa5qye2yN10Jfo54zqRccpIsjafxDML8cjYftzGoqhAJOmTt94_pbfaOQBk8xPKRzjA=w200-h200-l90-rj",
+      "link": "https://mn1.sunproxy.net/file/example.mp3"
+    }
+}

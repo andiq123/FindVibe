@@ -1,0 +1,16 @@
+<div
+  class="status-chip"
+  [class.visible]="!!label()"
+  [class.waking]="waking()"
+  role="status"
+  aria-live="polite"
+>
+  @if (label(); as text) {
+    @if (waking()) {
+      <span class="spinner" aria-hidden="true"></span>
+    } @else {
+      <span class="dot" aria-hidden="true"></span>
+    }
+    <span>{{ text }}</span>
+  }
+</div>

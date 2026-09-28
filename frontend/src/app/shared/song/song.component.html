@@ -1,0 +1,160 @@
+@if (loading()) {
+  <div class="flex justify-between items-center py-3 w-full skeleton-song px-5">
+    <div class="grid grid-flow-col gap-4 items-center w-full justify-start">
+      <div
+        class="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 skeleton-image bg-base-content/5"
+      ></div>
+      <div class="min-w-0 flex-1 space-y-2">
+        <div class="skeleton-title h-4 w-32 rounded bg-base-content/5"></div>
+        <div class="skeleton-artist h-3 w-24 rounded bg-base-content/5"></div>
+      </div>
+    </div>
+  </div>
+} @else if (selectMode()) {
+  <div
+    class="song-container group flex items-center gap-1 sm:gap-2 py-2.5 sm:py-3.5 transition-all duration-200 relative overflow-hidden px-2 sm:px-3 w-full touch-manipulation hover:bg-base-200/50 rounded-2xl"
+    [class.song-active]="isActive()"
+    [class.ring-1]="selected()"
+    [class.ring-primary/40]="selected()"
+    [class.bg-primary/5]="selected()"
+    [class.opacity-50]="isUnavailable()"
+    [id]="song().id"
+    appDragAndDrop
+    (reorderSongs)="reorder.emit($any($event))"
+  >
+    <label
+      class="shrink-0 w-9 h-11 flex items-center justify-center touch-manipulation cursor-pointer"
+      (click)="onSelectToggle($event)"
+    >
+      <input
+        type="checkbox"
+        class="checkbox checkbox-sm checkbox-primary pointer-events-none"
+        [checked]="selected()"
+        tabindex="-1"
+        [attr.aria-label]="'Select ' + song().title"
+      />
+    </label>
+    <ng-container *ngTemplateOutlet="default"></ng-container>
+    <button
+      type="button"
+      class="song-drag-handle shrink-0 w-9 h-11 flex items-center justify-center self-start mt-0.5 rounded-lg text-base-content/30 active:text-base-content/60 active:bg-base-content/10 cursor-grab active:cursor-grabbing touch-manipulation"
+      draggable="true"
+      aria-label="Drag to reorder"
+      title="Drag to reorder"
+      (click)="$event.preventDefault(); $event.stopPropagation()"
+    >
+      <fa-icon [icon]="faGripVertical" class="text-sm" />
+    </button>
+  </div>
+} @else {
+  <div
+    class="song-container group flex items-center gap-2.5 sm:gap-3 py-2.5 sm:py-3.5 transition-all duration-200 relative overflow-hidden px-3 sm:px-4 w-full touch-manipulation hover:bg-base-200/50 rounded-2xl"
+    [class.song-active]="isActive()"
+    [class.opacity-50]="isUnavailable()"
+  >
+    <ng-container *ngTemplateOutlet="default"></ng-container>
+  </div>
+}
+<ng-template #default>
+  <div
+    class="song-play flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 transition-transform duration-200 cursor-pointer touch-manipulation"
+    [class.unavailable]="isUnavailable()"
+    (click)="playOrPause()"
+    (keydown.enter)="playOrPause()"
+    (keydown.space)="playOrPause(); $event.preventDefault()"
+    tabindex="0"
+    role="button"
+    [attr.aria-label]="
+      song().title +
+      ' by ' +
+      song().artist +
+      (isActive() ? ' - Now playing' : '')
+    "
+    [attr.aria-disabled]="isUnavailable()"
+  >
+    <div
+      class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl overflow-hidden bg-base-300 shrink-0 album-art transition-colors duration-200"
+      [class.ring-2]="isActive()"
+      [class.ring-primary/40]="isActive()"
+    >
+      @if (isError() && isActive()) {
+        <div
+          class="absolute inset-0 bg-error/20 flex items-center justify-center z-20"
+        >
+          <fa-icon [icon]="faTriangleExclamation" class="text-error text-lg" />
+        </div>
+      }
+      <div
+        class="absolute inset-0 bg-base-300/60 flex items-center justify-center opacity-0 group-hover/song:opacity-100 transition-opacity duration-150 z-10"
+      >
+        <app-player-button [status]="status()" />
+      </div>
+      <img
+        class="w-full h-full object-cover"
+        [src]="song().image || 'no_album_art.jpg'"
+        [alt]="song().title + ' by ' + song().artist"
+        width="56"
+        height="56"
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+        (error)="$any($event.target).src = 'no_album_art.jpg'"
+      />
+    </div>
+    <div class="min-w-0 flex-1 overflow-hidden py-0.5">
+      <app-moving-title
+        [title]="song().title"
+        [isActive]="isActive()"
+        classes="font-semibold text-sm sm:text-base block transition-colors duration-200"
+      />
+      <app-moving-title
+        [title]="song().artist"
+        [isActive]="isActive()"
+        classes="text-xs text-base-content/50 block transition-colors duration-200 truncate mt-0.5"
+        [class.text-accent/70]="isActive()"
+      />
+      @if (sourceLabel(); as src) {
+        <p
+          class="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-base-content/35 truncate"
+        >
+          {{ src }}
+        </p>
+      }
+    </div>
+  </div>
+  @if (!selectMode()) {
+    <div
+      class="song-actions flex gap-0.5 items-center relative z-20 shrink-0 pl-1 touch-manipulation"
+      (pointerdown)="guardActions($event)"
+      (click)="guardActions($event)"
+    >
+      @if (radioAction()) {
+        <button
+          type="button"
+          class="song-action-btn"
+          (click)="startRadio($event)"
+          [disabled]="radioBusy()"
+          aria-label="Start radio from this song"
+          title="Start radio"
+        >
+          @if (radioLoading()) {
+            <span class="loading loading-spinner loading-xs"></span>
+          } @else {
+            <fa-icon [icon]="faWaveSquare" class="text-xs" />
+          }
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="song-action-btn"
+          (click)="addToQueue($event)"
+          aria-label="Add to queue"
+          title="Add to queue"
+        >
+          <fa-icon [icon]="faListUl" class="text-xs" />
+        </button>
+      }
+      <app-favorite-button [song]="song()" />
+    </div>
+  }
+</ng-template>

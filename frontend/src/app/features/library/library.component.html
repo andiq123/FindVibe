@@ -1,0 +1,166 @@
+@if (!isLoggedIn()) {
+  <app-user-form />
+} @else {
+  <app-page-content>
+    <div class="w-full mb-4">
+      <div class="flex items-end gap-3">
+        <div class="flex flex-col min-w-0 flex-1">
+          <span
+            class="text-[10px] font-bold text-base-content/50 uppercase tracking-[0.18em]"
+            >Your Library</span
+          >
+          <div class="flex items-baseline gap-2.5 min-w-0">
+            <h1
+              class="font-bold text-2xl tracking-tight bg-gradient-to-br from-base-content via-base-content/95 to-primary/80 bg-clip-text text-transparent truncate"
+            >
+              {{ username() ? (username() | titlecase) : "My" }}'s Vault
+            </h1>
+            <span class="shrink-0 text-xs text-base-content/40 tabular-nums">
+              {{ songCount() }}
+              {{ songCount() === 1 ? "song" : "songs" }}
+            </span>
+          </div>
+        </div>
+        <div class="shrink-0 ml-auto flex items-center gap-2">
+          <a
+            routerLink="/recent"
+            class="h-9 px-3 rounded-xl text-xs font-semibold touch-manipulation inline-flex items-center gap-1.5 bg-base-content/[0.06] text-base-content/70 active:bg-primary/15 active:text-primary"
+            aria-label="Recently played"
+          >
+            <fa-icon [icon]="faClockRotateLeft" class="text-[11px]" />
+            Recent
+          </a>
+          @if (songCount() >= 1 && !editMode()) {
+            <button
+              type="button"
+              class="h-9 px-3 rounded-xl text-xs font-semibold touch-manipulation inline-flex items-center gap-1.5 bg-primary/15 text-primary disabled:opacity-45"
+              (click)="startVaultRadio()"
+              [disabled]="radioBusy()"
+              aria-label="Start radio from your vault"
+            >
+              @if (radioLoading()) {
+                <span class="loading loading-spinner loading-xs"></span>
+              } @else {
+                <fa-icon [icon]="faWaveSquare" class="text-[11px]" />
+              }
+              Radio
+            </button>
+          }
+          @if (songCount() > 1) {
+            <button
+              type="button"
+              class="h-9 px-3 rounded-xl text-xs font-semibold touch-manipulation {{
+                editMode()
+                  ? 'bg-base-content/10 text-base-content/70'
+                  : 'bg-primary/15 text-primary'
+              }}"
+              (click)="toggleEditMode()"
+              [disabled]="loadingReorder()"
+            >
+              {{ editMode() ? "Cancel" : "Edit" }}
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (editMode() && selectedCount() > 0) {
+        <div
+          class="vault-bulk-toolbar mt-3 flex flex-wrap items-center gap-2 text-xs"
+          role="toolbar"
+          [attr.aria-label]="selectedCount() + ' songs selected'"
+        >
+          <span
+            class="vault-bulk-item font-semibold tabular-nums text-base-content/55 mr-1"
+            style="--i: 0"
+          >
+            {{ selectedCount() }} selected
+          </span>
+          <button
+            type="button"
+            class="vault-bulk-item h-8 px-2.5 rounded-lg font-semibold bg-base-content/[0.06] text-base-content/70 active:bg-primary/15 active:text-primary"
+            style="--i: 1"
+            (click)="moveSelected('top')"
+          >
+            Top
+          </button>
+          <button
+            type="button"
+            class="vault-bulk-item h-8 w-8 rounded-lg font-semibold bg-base-content/[0.06] text-base-content/70 active:bg-primary/15 active:text-primary inline-flex items-center justify-center"
+            style="--i: 2"
+            (click)="moveSelected('up')"
+            aria-label="Move up"
+          >
+            <fa-icon [icon]="faArrowUp" class="text-[11px]" />
+          </button>
+          <button
+            type="button"
+            class="vault-bulk-item h-8 w-8 rounded-lg font-semibold bg-base-content/[0.06] text-base-content/70 active:bg-primary/15 active:text-primary inline-flex items-center justify-center"
+            style="--i: 3"
+            (click)="moveSelected('down')"
+            aria-label="Move down"
+          >
+            <fa-icon [icon]="faArrowDown" class="text-[11px]" />
+          </button>
+          <button
+            type="button"
+            class="vault-bulk-item h-8 px-2.5 rounded-lg font-semibold bg-base-content/[0.06] text-base-content/70 active:bg-primary/15 active:text-primary"
+            style="--i: 4"
+            (click)="moveSelected('bottom')"
+          >
+            Bottom
+          </button>
+        </div>
+      }
+    </div>
+
+    <div
+      class="vault-songs relative -mx-1"
+      [class.vault-list--bar]="editMode() && hasReordered()"
+    >
+      <app-song-list
+        [songs]="songs()"
+        [isLoading]="loadingSongs()"
+        [selectMode]="editMode()"
+        [radioAction]="true"
+        [selectedIds]="selectedIds()"
+        [chunkSize]="24"
+        emptyStateTitle="No vibes yet"
+        emptyStateDescription="When you add songs to your library, they'll show up here."
+        (reorder)="reorderSongs($event)"
+        (playlistChange)="onChangePlaylist()"
+        (toggleSelect)="toggleSongSelect($event)"
+      />
+    </div>
+
+    @if (editMode() && hasReordered()) {
+      <div
+        class="vault-reorder-bar"
+        [class.vault-reorder-bar--above-mini]="aboveMini()"
+        role="dialog"
+        aria-label="Save playlist order"
+      >
+        <p class="vault-reorder-bar__label">
+          {{ selectedCount() ? selectedCount() + " selected · " : "" }}Order
+          changed
+        </p>
+        <div class="vault-reorder-bar__actions">
+          <button
+            type="button"
+            class="vault-reorder-bar__btn vault-reorder-bar__btn--primary"
+            (click)="saveEdits()"
+            [disabled]="loadingReorder()"
+            aria-label="Save order"
+          >
+            @if (loadingReorder()) {
+              <span class="loading loading-spinner loading-xs"></span>
+              <span>Saving</span>
+            } @else {
+              <fa-icon [icon]="faCheck" />
+              <span>Save</span>
+            }
+          </button>
+        </div>
+      </div>
+    }
+  </app-page-content>
+}

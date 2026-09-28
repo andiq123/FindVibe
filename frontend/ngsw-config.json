@@ -1,0 +1,113 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/favicon-16x16.png",
+          "/favicon-32x32.png",
+          "/apple-touch-icon.png",
+          "/icons/icon.svg",
+          "/index.html",
+          "/manifest.webmanifest",
+          "/*.css",
+          "/*.js"
+        ]
+      }
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
+        ]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "api-explore",
+      "urls": [
+        "http://localhost:8080/explore*",
+        "http://localhost:8080/recommend*",
+        "https://*/explore*",
+        "https://*/recommend*"
+      ],
+      "cacheConfig": {
+        "maxSize": 50,
+        "maxAge": "6h",
+        "timeout": "5s",
+        "strategy": "freshness"
+      }
+    },
+    {
+      "name": "api-fiber",
+      "urls": [
+        "http://localhost:8080/search*",
+        "http://localhost:8080/resolve*",
+        "http://localhost:8080/spotify/**",
+        "http://localhost:8080/similar-artists*",
+        "http://localhost:8080/favorites/**",
+        "http://localhost:8080/cover*",
+        "http://localhost:8080/lyrics*",
+        "http://localhost:8080/suggest*",
+        "https://*/search*",
+        "https://*/resolve*",
+        "https://*/spotify/**",
+        "https://*/similar-artists*",
+        "https://*/favorites/**",
+        "https://*/cover*",
+        "https://*/lyrics*",
+        "https://*/suggest*"
+      ],
+      "cacheConfig": {
+        "maxSize": 100,
+        "maxAge": "1h",
+        "timeout": "5s",
+        "strategy": "freshness"
+      }
+    },
+    {
+      "name": "album-art",
+      "urls": [
+        "https://lh3.googleusercontent.com/*",
+        "https://jpg.muzjam.org/*",
+        "https://*.mzstatic.com/**"
+      ],
+      "cacheConfig": {
+        "maxSize": 200,
+        "maxAge": "30d",
+        "timeout": "10s",
+        "strategy": "performance"
+      }
+    },
+    {
+      "name": "google-fonts-stylesheets",
+      "urls": [
+        "https://fonts.googleapis.com/css2?family=Mukta:wght@200;300;400;500;600;700;800&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap"
+      ],
+      "cacheConfig": {
+        "maxSize": 10,
+        "maxAge": "7d",
+        "timeout": "10s",
+        "strategy": "performance"
+      }
+    },
+    {
+      "name": "google-fonts-webfonts",
+      "urls": ["https://fonts.gstatic.com/s/*"],
+      "cacheConfig": {
+        "maxSize": 20,
+        "maxAge": "30d",
+        "timeout": "10s",
+        "strategy": "performance"
+      }
+    }
+  ]
+}

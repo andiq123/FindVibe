@@ -1,0 +1,138 @@
+<div
+  class="mini-player-container mini-player-desktop bg-base-100 rounded-2xl fixed w-[calc(100%-1.25rem)] max-w-[600px] cursor-pointer overflow-hidden touch-manipulation border border-base-content/12 transition-colors duration-200"
+  style="z-index: var(--z-mini-player); left: 50%; transform: translateX(-50%); bottom: calc(max(0.5rem, var(--safe-bottom)) + 3.6rem);"
+  [class.anim-mini-player-entry]="animateEntry"
+  [class.border-primary/35]="status() === playerStatus.Playing"
+  [class.border-base-content/10]="status() !== playerStatus.Playing"
+  (click)="toggleSize()"
+  (keydown.enter)="toggleSize()"
+  tabindex="0"
+  role="button"
+>
+  <div class="flex items-center gap-2.5 w-full p-2.5 sm:p-3">
+    <div
+      class="album-art relative w-12 sm:w-14 aspect-square shrink-0 rounded-xl overflow-hidden bg-base-300 transition-colors duration-200"
+        [class.album-art-playing]="status() === playerStatus.Playing"
+        [class.ring-2]="status() === playerStatus.Playing"
+        [class.ring-primary/30]="status() === playerStatus.Playing"
+      >
+        @if (status() === playerStatus.Loading) {
+          <div
+            class="absolute inset-0 bg-base-300/60 flex items-center justify-center z-30"
+          >
+            <div
+              class="w-5 h-5 border-2 border-base-content/30 border-t-base-content rounded-full animate-spin"
+            ></div>
+          </div>
+        }
+        @if (status() === playerStatus.Error) {
+          <div
+            class="absolute inset-0 bg-error/20 flex items-center justify-center z-30"
+          >
+            <fa-icon
+              [icon]="faTriangleExclamation"
+              class="text-error text-xl"
+            />
+          </div>
+        }
+        <div
+          class="absolute inset-0 bg-base-100/10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 z-10"
+        >
+          <app-player-button [status]="status()" />
+        </div>
+        <img
+          class="w-full h-full object-cover"
+          [ngSrc]="song().image || 'no_album_art.jpg'"
+          width="56"
+          height="56"
+          priority
+          alt="Album Art"
+          referrerpolicy="no-referrer"
+        />
+        @if (status() === playerStatus.Playing) {
+          <div
+            class="waveform-indicator absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-[2px] h-3 z-20 opacity-90"
+            aria-hidden="true"
+          >
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+            <span class="waveform-bar"></span>
+          </div>
+        }
+      </div>
+    <div class="flex-1 min-w-0">
+      <app-moving-title
+        [title]="song().title"
+        [isActive]="status() === playerStatus.Playing"
+        [classes]="
+          status() === playerStatus.Playing
+            ? 'text-sm font-semibold block'
+            : 'text-sm font-medium block'
+        "
+      />
+      @if (status() === playerStatus.Error) {
+        <p class="text-xs text-error/90 truncate" role="status">
+          {{ playError() || "Couldn't play — tap play to retry" }}
+        </p>
+      } @else {
+        <app-moving-title
+          [title]="song().artist"
+          [isActive]="status() === playerStatus.Playing"
+          classes="text-xs text-base-content/50 block"
+        />
+      }
+    </div>
+    <div class="hidden lg:flex items-center gap-1 shrink-0" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="w-9 h-9 flex items-center justify-center rounded-full text-base-content/50 hover:text-base-content/80 hover:bg-base-content/10 transition-colors duration-150"
+        (click)="previous($event)"
+        aria-label="Previous"
+      >
+        <fa-icon [icon]="faStepBackward" class="text-sm" />
+      </button>
+      <button
+        type="button"
+        class="w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-150"
+        [class.bg-primary]="status() === playerStatus.Playing"
+        [class.text-primary-content]="status() === playerStatus.Playing"
+        [class.text-base-content/70]="status() !== playerStatus.Playing"
+        [class.hover:bg-base-content/15]="status() !== playerStatus.Playing"
+        (click)="togglePlay($event)"
+        [attr.aria-label]="
+          status() === playerStatus.Error
+            ? 'Retry playback'
+            : status() === playerStatus.Playing
+              ? 'Pause'
+              : 'Play'
+        "
+      >
+        @if (status() === playerStatus.Loading) {
+          <span class="loading loading-spinner loading-sm text-current"></span>
+        } @else {
+          <fa-icon [icon]="status() === playerStatus.Playing ? faPause : faPlay" class="text-sm" />
+        }
+      </button>
+      <button
+        type="button"
+        class="w-9 h-9 flex items-center justify-center rounded-full text-base-content/50 hover:text-base-content/80 hover:bg-base-content/10 transition-colors duration-150"
+        (click)="next($event)"
+        aria-label="Next"
+      >
+        <fa-icon [icon]="faStepForward" class="text-sm" />
+      </button>
+    </div>
+    <button
+      class="btn btn-ghost btn-circle btn-sm transition-colors duration-200 shrink-0"
+      [class.text-primary]="status() === playerStatus.Playing"
+      [class.text-base-content/45]="status() !== playerStatus.Playing"
+      type="button"
+      aria-label="Expand player"
+    >
+      <fa-icon [icon]="faArrowUp" class="text-base" />
+    </button>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" [style.width.%]="progress()"></div>
+  </div>
+</div>

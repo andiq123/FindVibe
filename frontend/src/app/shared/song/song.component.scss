@@ -1,0 +1,95 @@
+.dragging {
+  opacity: 0.45;
+  transition: opacity 120ms ease;
+}
+
+.song-container.dragTarget {
+  background: color-mix(in oklab, var(--color-primary) 12%, transparent) !important;
+  box-shadow: inset 3px 0 0 0 var(--color-primary);
+  border-radius: 0.85rem !important;
+  transform: none !important;
+}
+
+.song-container {
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.2s ease;
+  touch-action: pan-y;
+  &:hover {
+    background: color-mix(in oklab, var(--color-base-200) 60%, transparent);
+  }
+}
+
+.song-play {
+  transition:
+    transform 0.2s cubic-bezier(0.32, 0.72, 0, 1),
+    scale var(--press-duration, 0.18s) var(--press-ease, cubic-bezier(0.32, 0.72, 0, 1));
+  &:hover {
+    transform: translateX(2px);
+  }
+  /* Mobile: squash art — readable press even if row scale is subtle. */
+  &:active .album-art {
+    transform: scale(0.94);
+  }
+  @media (max-width: 768px) {
+    &:hover {
+      transform: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none !important;
+    &:active .album-art {
+      transform: none;
+    }
+  }
+}
+
+.album-art {
+  transform-origin: center center;
+  transition: transform var(--press-duration, 0.18s)
+    var(--press-ease, cubic-bezier(0.32, 0.72, 0, 1));
+}
+
+.song-actions {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes pulse-opacity {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton-song {
+  pointer-events: none;
+  .skeleton-image,
+  .skeleton-title,
+  .skeleton-artist {
+    animation: pulse-opacity 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+.unavailable {
+  opacity: 0.3;
+  filter: grayscale(1);
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+.song-active {
+  background: color-mix(in oklab, var(--color-primary) 12%, var(--color-base-200));
+  app-moving-title :first-child {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+  &:hover {
+    background: color-mix(in oklab, var(--color-primary) 14%, var(--color-base-200));
+  }
+}
+
+.song-active [class*="text-accent/70"] {
+  color: color-mix(in oklab, var(--color-primary) 85%, var(--color-base-content)) !important;
+}

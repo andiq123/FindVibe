@@ -1,0 +1,22 @@
+# Free Render sleeps after ~15m idle → gateway 504 until wake.
+# Ping /health often enough that the instance stays warm.
+name: keepalive
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake FindVibeFiber
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 90 \
+              https://findvibefiber.onrender.com/health || echo 000)
+            echo "attempt $i → $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          exit 1

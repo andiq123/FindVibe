@@ -1,0 +1,21 @@
+meta {
+  name: Add Duplicate Favorite
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/favorites/{{userId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "id": "6fddb330-8ccb-4017-9620-40bcf105905b",
+    "title": "Vecinii De Bloc (Feat. Cristian Porcari)",
+    "artist": "Iuliana Beregoi",
+    "image": "https://lh3.googleusercontent.com/k88z4CopJJba-Rh8GUajpgEMovg0At9T2rqOvKvlRSc-tSLVcf8AreG0SpPJ6G5d7WsCkmWSmr4G76TH=w200-h200-l90-rj",
+    "link": "https://mn1.sunproxy.net/file/example.mp3"
+  }
+}

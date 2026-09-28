@@ -1,0 +1,21 @@
+meta {
+  name: Add Song to Favorites
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/favorites/{{userId}}
+  body: json
+  auth: none
+}
+
+body:json {
+    {
+      "id": "19aedb59-3a91-4a50-a52e-62b8b3dc9cf1",
+      "title": "Cristal & МОЁТ",
+      "artist": "MORGENSTERN",
+      "image": "https://lh3.googleusercontent.com/example.jpg",
+      "link": "https://mn1.sunproxy.net/file/example.mp3"
+    }
+}

@@ -1,0 +1,48 @@
+<div class="app-shell">
+  <app-connection-status />
+  @defer (when newUpdateAvailable()) {
+    <app-update-overlay />
+  }
+  <div class="app-main-container">
+    <div class="route-container route-transition-wrap">
+      <router-outlet />
+    </div>
+  </div>
+  @if (playlistService.currentSong(); as song) {
+    @if (settingsService.isMiniPlayer()) {
+      <app-mini-player
+        (toggleSizeEvent)="onToggleSize()"
+        [song]="song"
+        [status]="playerService.status()"
+        [currentTime]="playerService.currentTime()"
+        [duration]="playerService.duration()"
+      />
+    } @else {
+      <app-full-player
+        (toggleSizeEvent)="onToggleSize()"
+        [song]="song"
+        [status]="playerService.status()"
+        [currentTime]="playerService.currentTime()"
+        [duration]="playerService.duration()"
+      />
+    }
+  }
+  <app-navigation />
+  <app-keyboard-dismiss />
+  @if (toast.message(); as msg) {
+    <div
+      class="app-toast"
+      role="status"
+      aria-live="polite"
+      [attr.aria-busy]="toast.loading() || null"
+    >
+      @if (toast.loading()) {
+        <span class="app-toast-spin" aria-hidden="true"></span>
+      }
+      <span>{{ msg }}</span>
+    </div>
+  }
+  @defer (when modalService.isOpen()) {
+    <app-global-modal />
+  }
+</div>

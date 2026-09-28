@@ -1,0 +1,21 @@
+meta {
+  name: Reorder User Favorites
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{baseUrl}}/favorites/
+  body: json
+  auth: none
+}
+
+body:json {
+  [
+    {
+      "songId": "6fddb330-8ccb-4017-9620-40bcf105905b",
+      "order": 1
+    }
+  ]
+}
+
