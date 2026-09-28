@@ -50,9 +50,8 @@ After frontend dependency changes, run `cd frontend && npm ci`.
 These are ordinary directories, not submodules or nested repositories. The Go
 module path is retained so existing imports continue to work. Deployment services
 must use `backend/` or `frontend/` as their root directory when moved to this repo.
-The existing keepalive workflow lives in the root `.github/workflows/`.
-
-The launcher uses `npm run dev`, which preserves environment source files.
-The inherited `npm start` command regenerates both environment files; use the
-root launcher for local work. Production environment settings remain as imported
-and need review before deployment.
+Vercel uses root `frontend`, build command `npm run build`, and output directory
+`dist/client-angular/browser`. Set `API_URL=https://find-vibe.firewifi.online`.
+The production build generates its environment from `API_URL`; local development
+keeps using localhost. The Pi service uses root `backend`, entrypoint `./cmd`,
+and its existing linked PostgreSQL database and service environment variables.

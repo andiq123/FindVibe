@@ -5,7 +5,7 @@
     "ng": "ng",
     "dev": "ng serve",
     "start": "node mynode.js && ng serve",
-    "build": "ng build",
+    "build": "node mynode.js && ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint"
