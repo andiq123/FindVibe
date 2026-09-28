@@ -1,6 +1,6 @@
 import { Injectable } from "@angular/core";
 
-type LyricsMiss = { message: string; hard: boolean };
+interface LyricsMiss { message: string; hard: boolean }
 
 /** Session lyrics cache — avoids rehitting /lyrics for the same track. */
 @Injectable({ providedIn: "root" })

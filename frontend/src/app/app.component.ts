@@ -2,7 +2,6 @@ import {
   Component,
   OnInit,
   inject,
-  computed,
   DestroyRef,
   ChangeDetectionStrategy,
 } from "@angular/core";
@@ -15,7 +14,6 @@ import { ConnectionStatusComponent } from "./shared/connection-status/connection
 import { UpdateOverlayComponent } from "./shared/update-overlay/update-overlay.component";
 import { GlobalModalComponent } from "./shared/components/global-modal/global-modal.component";
 import { SettingsService } from "./core/services/settings.service";
-import { UserService } from "./features/library/services/user.service";
 import { AudioService } from "./core/services/audio.service";
 import { MediaSessionService } from "./core/services/media-session.service";
 import { OfflineStorageService } from "./features/library/services/offline-storage.service";
@@ -27,7 +25,7 @@ import { ToastService } from "./core/services/toast.service";
 import { KeyboardDismissComponent } from "./shared/keyboard-dismiss/keyboard-dismiss.component";
 
 /** Enables :active styles on iOS — no-op handler, passive. */
-function noopTouch(): void {}
+function noopTouch(): void { /* Passive listener enables iOS :active feedback. */ }
 
 @Component({
   selector: "app-root",

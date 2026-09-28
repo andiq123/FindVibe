@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +8,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/andiq123/FindVibeFiber/internal/core/domain"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -26,11 +27,20 @@ func (h *RecommendHandler) GetStream(c fiber.Ctx) error {
 		return c.Status(http.StatusServiceUnavailable).JSON(fiber.Map{"error": "stream proxy unavailable"})
 	}
 
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(c.Context()), 45*time.Second)
-	defer cancel()
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(c.Context()), 5*time.Minute)
+	streaming := false
+	defer func() {
+		if !streaming {
+			cancel()
+		}
+	}()
 
 	want := lastfmPair{artist: artist, title: title}
-	song, ok := h.resolveOne(ctx, want, lastfmPair{}, false)
+	song := domain.Song{Link: strings.TrimSpace(c.Query("link"))}
+	ok := song.Link != ""
+	if !ok {
+		song, ok = h.resolveOne(ctx, want, lastfmPair{}, false)
+	}
 	if !ok {
 		song, ok = h.resolveOne(ctx, want, lastfmPair{}, true)
 		if !ok {
@@ -40,7 +50,7 @@ func (h *RecommendHandler) GetStream(c fiber.Ctx) error {
 
 	rng := strings.TrimSpace(c.Get("Range"))
 	resp, err := h.openStreamUpstream(ctx, song.Link, rng)
-	if err != nil || resp == nil || resp.StatusCode >= 400 {
+	if err != nil || resp == nil || !validAudioResponse(resp) {
 		if resp != nil {
 			resp.Body.Close()
 		}
@@ -49,7 +59,7 @@ func (h *RecommendHandler) GetStream(c fiber.Ctx) error {
 			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": "Couldn't fetch stream"})
 		}
 		resp, err = h.openStreamUpstream(ctx, fresh.Link, rng)
-		if err != nil || resp == nil || resp.StatusCode >= 400 {
+		if err != nil || resp == nil || !validAudioResponse(resp) {
 			if resp != nil {
 				resp.Body.Close()
 			}
@@ -58,7 +68,7 @@ func (h *RecommendHandler) GetStream(c fiber.Ctx) error {
 	}
 
 	ct := resp.Header.Get("Content-Type")
-	if ct == "" || strings.HasPrefix(ct, "text/") {
+	if ct == "" {
 		ct = "audio/mpeg"
 	}
 	c.Set("Content-Type", ct)
@@ -72,11 +82,27 @@ func (h *RecommendHandler) GetStream(c fiber.Ctx) error {
 	}
 	c.Status(resp.StatusCode)
 
-	return c.SendStreamWriter(func(w *bufio.Writer) {
-		defer resp.Body.Close()
-		_, _ = io.Copy(w, io.LimitReader(resp.Body, 80<<20)) // hard cap ~80MB
-		_ = w.Flush()
-	})
+	streaming = true
+	return c.SendStream(&audioStreamBody{Reader: io.LimitReader(resp.Body, 80<<20), body: resp.Body, cancel: cancel}, int(resp.ContentLength))
+}
+
+// Fiber closes this body after sending, not when the handler returns.
+type audioStreamBody struct {
+	io.Reader
+	body   io.Closer
+	cancel context.CancelFunc
+}
+
+func (b *audioStreamBody) Close() error {
+	defer b.cancel()
+	return b.body.Close()
+}
+
+func validAudioResponse(resp *http.Response) bool {
+	ct := strings.ToLower(resp.Header.Get("Content-Type"))
+	return (resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusPartialContent) &&
+		resp.ContentLength <= 80<<20 &&
+		(ct == "" || strings.HasPrefix(ct, "audio/") || strings.HasPrefix(ct, "application/octet-stream"))
 }
 
 func (h *RecommendHandler) openStreamUpstream(ctx context.Context, link, rangeHeader string) (*http.Response, error) {
@@ -93,7 +119,16 @@ func (h *RecommendHandler) openStreamUpstream(ctx context.Context, link, rangeHe
 	if rangeHeader != "" {
 		req.Header.Set("Range", rangeHeader)
 	}
-	return h.upstream.Do(req)
+	client := *h.upstream
+	client.Timeout = 0 // The stream context owns the full-body deadline.
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 10 || !streamProxyAllowed(req.URL) {
+			return fmt.Errorf("stream redirect not allowed")
+		}
+		applyStreamUpstreamHeaders(req, req.URL)
+		return nil
+	}
+	return client.Do(req)
 }
 
 func streamProxyAllowed(u *url.URL) bool {
@@ -101,13 +136,13 @@ func streamProxyAllowed(u *url.URL) bool {
 		return false
 	}
 	host := strings.ToLower(u.Hostname())
-	if host == "" {
+	if host == "" || u.User != nil || (u.Port() != "" && u.Port() != "443") {
 		return false
 	}
 	if host == "mp3.pm" || strings.HasSuffix(host, ".mp3.pm") {
 		return true
 	}
-	if strings.Contains(host, "sunproxy") {
+	if host == "sunproxy.net" || strings.HasSuffix(host, ".sunproxy.net") {
 		return true
 	}
 	if host == "mp3mn.net" || strings.HasSuffix(host, ".mp3mn.net") {

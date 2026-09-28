@@ -22,8 +22,8 @@ export class MovingTitleComponent implements AfterViewInit, OnDestroy {
   classes = input<string>('text-md font-bold');
   isActive = input<boolean>(true);
   isBold = input<boolean>(false);
-  fontSize = input<string>('1rem');
-  color = input<string>('inherit');
+  fontSize = input<string>('');
+  color = input<string>('');
   container = viewChild<ElementRef<HTMLDivElement>>('container');
   content = viewChild<ElementRef<HTMLDivElement>>('content');
   isOverflowing = signal<boolean>(false);

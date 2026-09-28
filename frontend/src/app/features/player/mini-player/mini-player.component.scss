@@ -1,5 +1,11 @@
 .mini-player-container {
   -webkit-tap-highlight-color: transparent;
+  background: color-mix(in oklab, var(--color-base-200) 92%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px #0004;
+  border-radius: 22px;
+  max-width: 440px;
   transition:
     transform 0.15s cubic-bezier(0.32, 0.72, 0, 1),
     scale var(--press-duration, 0.18s) var(--press-ease, cubic-bezier(0.32, 0.72, 0, 1)),
@@ -84,7 +90,9 @@
   top: 0;
   height: 100%;
   background: linear-gradient(90deg, var(--color-primary), color-mix(in oklab, var(--color-primary) 75%, transparent));
-  transition: width 0.3s linear;
+  width: 100%;
+  transform-origin: left;
+  transition: transform 0.25s linear;
 }
 
 .btn {

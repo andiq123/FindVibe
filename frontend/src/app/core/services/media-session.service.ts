@@ -78,6 +78,7 @@ export function tabTitle(
 }
 
 function safeLabel(raw: string, max = 64): string {
+  // eslint-disable-next-line no-control-regex -- Strip control characters from OS media labels.
   return raw.replace(/[\u0000-\u001f\u007f]+/g, "").trim().slice(0, max);
 }
 
@@ -115,7 +116,6 @@ export class MediaSessionService implements OnDestroy {
   initialize(): void {
     if (!("mediaSession" in navigator) || this.handlersBound) return;
     this.handlersBound = true;
-    const ms = navigator.mediaSession;
     const seekBy = (offset: number) => {
       const next = this.player.currentTime() + offset;
       const duration = this.player.duration();

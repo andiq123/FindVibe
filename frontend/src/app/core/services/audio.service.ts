@@ -57,7 +57,7 @@ export class AudioService implements OnDestroy {
     el.addEventListener(
       "playing",
       (e) => {
-        if (e.target !== this.audio) return;
+        if (e.target !== this.audio || !el.getAttribute("src")) return;
         this.playBlocked = false;
         this.status.set(PlayerStatus.Playing);
       },
@@ -66,7 +66,7 @@ export class AudioService implements OnDestroy {
     el.addEventListener(
       "pause",
       (e) => {
-        if (e.target !== this.audio) return;
+        if (e.target !== this.audio || !el.getAttribute("src")) return;
         const s = this.status();
         // Src/load() emits pause before loadstart — don't latch car/MS to paused.
         if (
@@ -83,7 +83,7 @@ export class AudioService implements OnDestroy {
     el.addEventListener(
       "ended",
       (e) => {
-        if (e.target !== this.audio) return;
+        if (e.target !== this.audio || !el.getAttribute("src")) return;
         this.status.set(PlayerStatus.Ended);
       },
       { signal },
@@ -110,15 +110,17 @@ export class AudioService implements OnDestroy {
     el.addEventListener(
       "loadstart",
       (e) => {
-        if (e.target !== this.audio) return;
-        this.status.set(PlayerStatus.Loading);
+        if (e.target !== this.audio || !el.getAttribute("src")) return;
+        if (this.status() !== PlayerStatus.Paused) {
+          this.status.set(PlayerStatus.Loading);
+        }
       },
       { signal },
     );
     el.addEventListener(
       "error",
       (e) => {
-        if (e.target !== this.audio) return;
+        if (e.target !== this.audio || !el.getAttribute("src")) return;
         // Src swap aborts the previous load — not a real failure.
         if (this.audio?.error?.code === MediaError.MEDIA_ERR_ABORTED) return;
         this.status.set(PlayerStatus.Error);
@@ -131,9 +133,16 @@ export class AudioService implements OnDestroy {
     if (!this.audio) this.initialize();
     if (!this.audio) return;
     this.alreadyAddedToRecents = false;
+    this.currentTime.set(0);
+    this.duration.set(0);
+    this.playBlocked = false;
     // Before src/load() so the abort-pause can't flip status to Paused.
     if (src) this.status.set(PlayerStatus.Loading);
-    this.audio.src = src;
+    if (src) this.audio.src = src;
+    else {
+      this.audio.removeAttribute("src");
+      this.status.set(PlayerStatus.Stopped);
+    }
     this.audio.load();
   }
 
@@ -195,10 +204,14 @@ export class AudioService implements OnDestroy {
 
   async play(): Promise<void> {
     if (!this.audio) return;
+    const audio = this.audio;
+    const src = audio.src;
     try {
-      await this.audio.play();
+      await audio.play();
+      if (this.audio !== audio || audio.src !== src) return;
       this.playBlocked = false;
     } catch (e) {
+      if (this.audio !== audio || audio.src !== src) return;
       if (e instanceof DOMException) {
         // Interrupted by a newer setSong — ignore.
         if (e.name === "AbortError") return;

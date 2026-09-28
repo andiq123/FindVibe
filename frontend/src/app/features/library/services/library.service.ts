@@ -104,13 +104,13 @@ export class LibraryService {
             if (!s.image?.trim() && prev?.image?.trim()) {
               this.libraryApiService
                 .updateFavoriteImage(s.id, prev.image)
-                .subscribe({ error: () => {} });
+                .subscribe({ error: () => { /* Retain local metadata when background sync is unavailable. */ } });
               out = { ...out, image: prev.image };
             }
             if (!s.lyrics?.trim() && prev?.lyrics?.trim()) {
               this.libraryApiService
                 .updateFavoriteLyrics(s.id, prev.lyrics)
-                .subscribe({ error: () => {} });
+                .subscribe({ error: () => { /* Retain local metadata when background sync is unavailable. */ } });
               out = { ...out, lyrics: prev.lyrics };
             }
             return out;
@@ -215,7 +215,7 @@ export class LibraryService {
     );
     this.playlistService.patchSongImage(link, img);
     this.libraryApiService.updateFavoriteImage(vault.id, img).subscribe({
-      error: () => {},
+      error: () => { /* Retain local metadata when background sync is unavailable. */ },
     });
   }
 
@@ -277,7 +277,7 @@ export class LibraryService {
       prev.map((s) => (s.link === link ? { ...s, lyrics: text } : s)),
     );
     this.libraryApiService.updateFavoriteLyrics(vault.id, text).subscribe({
-      error: () => {},
+      error: () => { /* Retain local metadata when background sync is unavailable. */ },
     });
   }
 

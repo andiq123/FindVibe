@@ -18,6 +18,7 @@ import { AudioService } from "./audio.service";
 import { RadioService } from "./radio.service";
 import { ToastService } from "./toast.service";
 import { StorageService } from "./storage.service";
+import { streamUrl } from "../utils/song-audio";
 import { upgradeToHttps } from "../utils/utils";
 
 /** Cap consecutive dead tracks so a broken queue can't spin forever. */
@@ -44,6 +45,8 @@ export class PlayerService implements OnDestroy {
   private wakeLock: WakeLockSentinel | null = null;
   private wakeLockGen = 0;
   private loadGen = 0;
+  private triedStream = false;
+  private wantsPlayback = false;
   private persistTimerId: ReturnType<typeof setInterval> | null = null;
   private visibilityHandler = () => this.onVisibility();
   readonly status = this.audioService.status;
@@ -92,8 +95,14 @@ export class PlayerService implements OnDestroy {
       });
       if (status === PlayerStatus.Error) {
         untracked(() => {
+          const song = this.playlistService.currentSong();
+          if (song && this.wantsPlayback && !this.triedStream && !this.settingsService.isNavigatorOffline()) {
+            this.triedStream = true;
+            void this.audioService.playSource(streamUrl(song));
+            return;
+          }
           if (!this.playError()) {
-            this.playError.set("Couldn't play this track");
+            this.playError.set("Couldn't play this track — try another source");
           }
           if (!this.handlingSongError && this.allowErrorSkip) {
             this.handlingSongError = true;
@@ -220,13 +229,15 @@ export class PlayerService implements OnDestroy {
     opts: { fromQueue: boolean; autoplay: boolean },
   ): Promise<number> {
     const gen = ++this.loadGen;
+    this.triedStream = false;
+    this.wantsPlayback = opts.autoplay;
     this.cleanupObjectUrl();
     // Don't clear handlingSongEnded here — effect finally owns it; clearing
     // mid-flight re-enters Ended→next and skips tracks.
     this.playError.set("");
     this.allowErrorSkip = opts.fromQueue;
     this.playlistService.setCurrentSong(song);
-    let secureLink = upgradeToHttps(song.link);
+    const secureLink = upgradeToHttps(song.link);
 
     // Online: CDN first — never await Cache API before play() (breaks iOS auto-next).
     // Offline: vault blob only.
@@ -272,6 +283,7 @@ export class PlayerService implements OnDestroy {
 
   /** Retry hard-reloads the current track when we're on Error/Ended. */
   async play(): Promise<void> {
+    this.wantsPlayback = true;
     const status = this.status();
     if (status === PlayerStatus.Error || status === PlayerStatus.Ended) {
       const song = this.playlistService.currentSong();
@@ -284,6 +296,7 @@ export class PlayerService implements OnDestroy {
   }
 
   pause(): void {
+    this.wantsPlayback = false;
     this.audioService.pause();
     this.persistNow();
   }

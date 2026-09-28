@@ -20,7 +20,7 @@ const BECAUSE_SLOTS = 2;
 /** Soft cap after Fiber resolve (handler returns up to recommendResolveCap). */
 const BECAUSE_RAIL = 10;
 
-export type ExploreSection = {
+export interface ExploreSection {
   id: string;
   title: string;
   subtitle: string;
@@ -30,15 +30,15 @@ export type ExploreSection = {
   seedSong?: Song;
   /** Show Start radio on the shelf header. */
   radio?: boolean;
-};
+}
 
-export type ExploreResponse = {
+export interface ExploreResponse {
   country: string;
   sections: ExploreSection[];
   cached?: boolean;
-};
+}
 
-type BecauseCache = {
+interface BecauseCache {
   seed: string;
   at: number;
   title: string;
@@ -46,18 +46,18 @@ type BecauseCache = {
   songs: Song[];
   seedSong?: Song;
   slot?: number;
-};
+}
 
-type BecauseStore = {
+interface BecauseStore {
   at: number;
   items: BecauseCache[];
-};
+}
 
-type ChartsCache = {
+interface ChartsCache {
   at: number;
   country: string;
   sections: ExploreSection[];
-};
+}
 
 @Injectable({ providedIn: "root" })
 export class ExploreService {
@@ -119,8 +119,7 @@ export class ExploreService {
 
     if (!refresh) this.paintFromDisk();
 
-    const painted = this.sections().length > 0;
-    if (!painted) this.loading.set(true);
+    this.loading.set(true);
     this.error.set("");
     try {
       const r = await firstValueFrom(

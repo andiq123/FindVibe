@@ -58,6 +58,12 @@ export class SearchPageComponent {
   status = computed(() => this.songsService.status());
   pagination = computed(() => this.songsService.pagination());
   searchStatus = SearchStatus;
+  warning = this.songsService.searchWarning;
+
+  retrySearch(): void {
+    this.songsService.searchSongs(this.query(), 1, true)
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+  }
   faMagnifyingGlass = faMagnifyingGlass;
   faTriangleExclamation = faTriangleExclamation;
   sourceHost = sourceHost;
@@ -120,14 +126,6 @@ export class SearchPageComponent {
       : "Try a different search!",
   );
   constructor() {
-    effect(() => {
-      if (
-        this.settingsService.isServerDown() &&
-        this.router.url !== "/library"
-      ) {
-        this.router.navigate(["/library"]);
-      }
-    });
     effect(() => {
       const currentQuery = this.query();
       if (!currentQuery) {

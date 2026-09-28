@@ -24,13 +24,12 @@
   >
     <label
       class="shrink-0 w-9 h-11 flex items-center justify-center touch-manipulation cursor-pointer"
-      (click)="onSelectToggle($event)"
     >
       <input
         type="checkbox"
-        class="checkbox checkbox-sm checkbox-primary pointer-events-none"
+        class="checkbox checkbox-sm checkbox-primary"
+        (change)="onSelectToggle($event)"
         [checked]="selected()"
-        tabindex="-1"
         [attr.aria-label]="'Select ' + song().title"
       />
     </label>
@@ -126,7 +125,6 @@
     <div
       class="song-actions flex gap-0.5 items-center relative z-20 shrink-0 pl-1 touch-manipulation"
       (pointerdown)="guardActions($event)"
-      (click)="guardActions($event)"
     >
       @if (radioAction()) {
         <button

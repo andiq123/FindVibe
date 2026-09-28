@@ -1,6 +1,5 @@
 <app-page-content>
   <div class="explore space-y-4 sm:space-y-5 pt-1">
-    <app-search-bar />
 
     <div class="explore-header flex items-end justify-between gap-3">
       <div class="min-w-0">
@@ -14,7 +13,7 @@
           }
         </span>
         <h1
-          class="font-bold text-[1.65rem] leading-tight tracking-tight bg-gradient-to-br from-base-content via-base-content/95 to-primary/80 bg-clip-text text-transparent"
+          class="discovery-heading"
         >
           Explore
         </h1>
@@ -33,12 +32,29 @@
       </button>
     </div>
 
+    <app-search-bar />
+
+    @if (explore.sections()[0]; as featured) {
+      @if (featuredSong(); as pick) {
+        <section class="discovery-feature" aria-label="Featured discovery">
+          <div class="discovery-feature-copy">
+            <span class="page-eyebrow">A NEW LISTEN</span>
+            <h2>{{ pick.title }}</h2>
+            <p>{{ pick.artist }}</p>
+            <button type="button" class="discovery-play" (click)="playFromShelf(featured, pick)" [attr.aria-label]="'Play ' + pick.title + ' by ' + pick.artist">
+              <span aria-hidden="true">▶</span> Listen now
+            </button>
+          </div>
+          <img [src]="featuredImage() || cover(pick)" alt="" width="320" height="320" fetchpriority="high" decoding="async" (error)="onCoverError($event)" />
+        </section>
+      }
+    }
+
     @if (explore.needsTaste() && !explore.loading() && explore.sections().length) {
       <div class="explore-nudge" role="status">
-        <p class="explore-nudge-title">Unlock your taste</p>
+        <p class="explore-nudge-title">Make it yours</p>
         <p class="explore-nudge-body">
-          Search and save a few tracks — Because shelves and smarter radio light
-          up from your vault.
+          Save a few favorites to discover more music you love.
         </p>
         <a routerLink="/songs" class="explore-nudge-cta">Find songs</a>
       </div>
@@ -129,13 +145,12 @@
             </div>
           </div>
           <div class="explore-rail-wrap">
-            <div class="explore-rail" role="list">
+            <div class="explore-rail">
               @for (song of section.songs; track song.link) {
                 <button
                   type="button"
                   class="explore-card explore-card-in"
                   [style.--c]="$index"
-                  role="listitem"
                   (click)="playFromShelf(section, song)"
                   [attr.aria-label]="
                     'Play ' + song.title + ' by ' + song.artist
@@ -148,6 +163,7 @@
                       width="140"
                       height="140"
                       loading="lazy"
+                      (error)="onCoverError($event)"
                       decoding="async"
                       draggable="false"
                     />

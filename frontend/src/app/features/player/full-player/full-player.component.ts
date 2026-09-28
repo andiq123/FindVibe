@@ -49,7 +49,7 @@ import { RadioService } from "../../../core/services/radio.service";
 import { Song } from "../../../core/models/song.model";
 import { MovingTitleComponent } from "../../../shared/moving-title/moving-title.component";
 import { TimeFormatPipe } from "../../../shared/pipes/time-format.pipe";
-import { upgradeToHttps } from "../../../core/utils/utils";
+import { fetchSongAudio } from "../../../core/utils/song-audio";
 import { OfflineStorageService } from "../../library/services/offline-storage.service";
 import { LibraryService } from "../../library/services/library.service";
 import { ToastService } from "../../../core/services/toast.service";
@@ -187,7 +187,7 @@ export class FullPlayerComponent implements OnInit, AfterViewInit, OnDestroy {
             // only favorites live in DB — never PATCH search-only tracks
             if (vault) this.libraryService.persistSongImage(s.link, r.image);
           },
-          error: () => {},
+          error: () => { /* Keep the existing artwork if enrichment fails. */ },
         });
       onCleanup(() => sub.unsubscribe());
     });
@@ -657,24 +657,22 @@ export class FullPlayerComponent implements OnInit, AfterViewInit, OnDestroy {
   async downloadMp3() {
     if (this.isDownloadingMp3()) return;
     const song = this.song();
-    const url = upgradeToHttps(song.link);
-    if (!url) return;
+    if (!song.link) return;
 
     const filename = mp3Filename(song.artist, song.title);
     this.isDownloadingMp3.set(true);
     try {
-      const res = await fetch(url, { mode: "cors", credentials: "omit" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const res = await fetchSongAudio(song);
       const forVault = res.clone();
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
       triggerFileDownload(objectUrl, filename);
       URL.revokeObjectURL(objectUrl);
-      void this.offlineStorage.rememberResponse(song, forVault);
+      void this.offlineStorage.rememberResponse(song, forVault).catch(() => {
+        this.toast.show("Downloaded, but could not save an offline copy");
+      });
     } catch {
-      // CORS: file via direct URL; still try vault with no-cors path.
-      triggerFileDownload(url, filename);
-      void this.offlineStorage.cacheSong(song);
+      this.toast.show("Could not download this track — try another source");
     } finally {
       if (!this.destroyed) this.isDownloadingMp3.set(false);
     }
@@ -683,6 +681,7 @@ export class FullPlayerComponent implements OnInit, AfterViewInit, OnDestroy {
 
 function mp3Filename(artist: string, title: string): string {
   const base = `${artist} - ${title}`
+    // eslint-disable-next-line no-control-regex -- File names must not contain control characters.
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "")
     .replace(/\s+/g, " ")
     .trim()

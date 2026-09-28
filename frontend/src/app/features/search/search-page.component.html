@@ -1,7 +1,16 @@
 <app-page-content>
-  <div class="space-y-4 sm:space-y-5 pt-1">
+  <div class="search-page space-y-4 sm:space-y-5 pt-1">
+    <header class="page-heading"><p class="page-eyebrow">YOUR NEXT FAVORITE</p><h1>Search</h1></header>
     <app-search-bar [query]="query()" />
 
+    @if (status() === searchStatus.Loading) {
+      <div class="search-progress" role="status"><span class="loading loading-spinner loading-xs"></span>
+        {{ songs().length ? songs().length + ' songs · finding more…' : 'Finding your music…' }}
+      </div>
+    }
+    @if (warning()) {
+      <div class="search-notice" role="status">{{ warning() }} <button type="button" (click)="retrySearch()">Retry</button></div>
+    }
     @if (!hasActiveSearch()) {
       <app-empty-state
         [icon]="faMagnifyingGlass"
@@ -9,13 +18,13 @@
         description="Search for vibes, artists, or songs."
       />
     } @else {
-      @if (status() === searchStatus.None || status() === searchStatus.Loading) {
+      @if ((status() === searchStatus.None || status() === searchStatus.Loading) && songs().length === 0) {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-start">
           <div class="lg:col-span-1 space-y-2 sm:space-y-3">
             <h3
               class="text-[10px] sm:text-[11px] font-semibold text-base-content/45 uppercase tracking-[0.14em]"
             >
-              Top match
+              First result
             </h3>
             <div
               class="premium-card max-lg:h-[4.5rem] lg:aspect-square animate-pulse bg-base-content/5"
@@ -39,6 +48,7 @@
           description="Check your connection, then try again."
           variant="error"
         />
+        <button type="button" class="native-retry" (click)="retrySearch()">Try again</button>
       } @else if (songs().length === 0) {
         <app-empty-state
           [icon]="faMagnifyingGlass"
@@ -51,7 +61,7 @@
             <h3
               class="text-[10px] sm:text-[11px] font-semibold text-base-content/45 uppercase tracking-[0.14em]"
             >
-              Top match
+              First result
             </h3>
             @if (topSong(); as featuredSong) {
               <div
@@ -79,7 +89,7 @@
                     [alt]="featuredSong.title + ' by ' + featuredSong.artist"
                     width="512"
                     height="512"
-                    loading="lazy"
+                    loading="eager"
                     decoding="async"
                     referrerpolicy="no-referrer"
                     (error)="$any($event.target).src = 'no_album_art.jpg'"
@@ -97,7 +107,7 @@
                       <span
                         class="px-1.5 py-0.5 bg-primary/20 text-primary text-[9px] font-bold rounded uppercase tracking-wider"
                       >
-                        Top
+                        Song
                       </span>
                       @if (sourceHost(featuredSong.provider); as src) {
                         <span
@@ -162,7 +172,7 @@
                 (playlistChange)="onChangePlaylist()"
               />
               @if (pagination(); as pages) {
-                @if (pages.totalPages > 1) {
+                @if (pages.totalPages > 1 && status() !== searchStatus.Loading) {
                   <div class="mt-4 px-2 pb-2">
                     <app-pagination
                       [pagination]="pages"

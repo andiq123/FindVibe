@@ -1,5 +1,6 @@
 import { Injectable, signal, computed, inject } from "@angular/core";
 import { bytesToGB, upgradeToHttps } from "../../../core/utils/utils";
+import { fetchSongAudio } from "../../../core/utils/song-audio";
 import { Song } from "../../../core/models/song.model";
 import { StorageService } from "../../../core/services/storage.service";
 import { trackLoadingState } from "../../../core/utils/loading-state.util";
@@ -48,7 +49,7 @@ export class OfflineStorageService {
     await Promise.all(
       list.map(async (song) => {
         const match = await cache.match(upgradeToHttps(song.link));
-        if (match) availableIds.push(song.id);
+        if (match?.ok && match.type !== "opaque") availableIds.push(song.id);
       }),
     );
     this._availableOfflineSongIds.set(availableIds);
@@ -94,7 +95,7 @@ export class OfflineStorageService {
           result.failed++;
           continue;
         }
-        if (await cache.match(url)) {
+        if ((await cache.match(url))?.ok) {
           this.addAvailableOfflineSongId(song.id);
           result.skipped++;
           continue;
@@ -102,13 +103,10 @@ export class OfflineStorageService {
 
         this.trackProgress(song.id, true);
         try {
-          const ok = await putInCache(cache, url);
-          if (ok) {
-            this.addAvailableOfflineSongId(song.id);
-            result.saved++;
-          } else {
-            result.failed++;
-          }
+          const response = await fetchSongAudio(song);
+          await cache.put(url, response);
+          this.addAvailableOfflineSongId(song.id);
+          result.saved++;
         } catch (error) {
           console.error("[OfflineStorage] Failed to cache song:", error);
           result.failed++;
@@ -129,7 +127,8 @@ export class OfflineStorageService {
     existingCache?: Cache,
   ): Promise<Response | undefined> {
     const cache = existingCache ?? (await this.getCache());
-    return cache.match(upgradeToHttps(songLink));
+    const response = await cache.match(upgradeToHttps(songLink));
+    return response?.ok && response.type !== "opaque" ? response : undefined;
   }
 
   async removeCache(): Promise<void> {
@@ -172,28 +171,4 @@ export class OfflineStorageService {
   private trackProgress(id: string, isLoading: boolean): void {
     trackLoadingState(this._currentLoadingDownloadSongIds, id, isLoading);
   }
-}
-
-/** CORS first; no-cors opaque fallback so CDNs without ACAO still vault. */
-async function putInCache(cache: Cache, url: string): Promise<boolean> {
-  try {
-    const res = await fetch(url, { mode: "cors", credentials: "omit" });
-    if (res.ok) {
-      await cache.put(url, res);
-      return true;
-    }
-  } catch {
-    // fall through
-  }
-  try {
-    const res = await fetch(url, { mode: "no-cors", credentials: "omit" });
-    // opaque responses are status 0 but cacheable + playable via blob URL
-    if (res.type === "opaque" || res.ok) {
-      await cache.put(url, res);
-      return true;
-    }
-  } catch {
-    return false;
-  }
-  return false;
 }

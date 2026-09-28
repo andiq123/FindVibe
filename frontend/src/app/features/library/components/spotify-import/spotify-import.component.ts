@@ -31,18 +31,18 @@ type RowStatus =
   | "failed"
   | "cancelled";
 
-type ImportRow = {
+interface ImportRow {
   artist: string;
   title: string;
   status: RowStatus;
   /** Matched catalog title when it differs from Spotify. */
   matched?: string;
-};
+}
 
-type PlaylistPayload = {
+interface PlaylistPayload {
   name: string;
   tracks: { artist: string; title: string }[];
-};
+}
 
 @Component({
   selector: "app-spotify-import",

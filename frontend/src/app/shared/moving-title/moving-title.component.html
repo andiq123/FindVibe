@@ -7,17 +7,17 @@
   >
     <span 
       [class]="classes()"
-      [style.font-size]="fontSize()"
-      [style.color]="color()"
-      [style.font-weight]="isBold() ? 'bold' : 'normal'"
+      [style.font-size]="fontSize() || null"
+      [style.color]="color() || null"
+      [style.font-weight]="isBold() ? 'bold' : null"
     >{{ title() }}</span>
     @if (isOverflowing()) {
-      <span class="marquee-spacer"></span>
-      <span 
+      <span class="marquee-spacer" aria-hidden="true"></span>
+      <span aria-hidden="true"
         [class]="classes()"
-        [style.font-size]="fontSize()"
-        [style.color]="color()"
-        [style.font-weight]="isBold() ? 'bold' : 'normal'"
+        [style.font-size]="fontSize() || null"
+        [style.color]="color() || null"
+        [style.font-weight]="isBold() ? 'bold' : null"
       >{{ title() }}</span>
     }
   </div>

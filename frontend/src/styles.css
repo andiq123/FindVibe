@@ -6,14 +6,14 @@
   default: true;
   color-scheme: dark;
   /* Lifted charcoal — airier than pure black, still dark */
-  --color-base-100: oklch(34% 0.018 275);
-  --color-base-200: oklch(40% 0.022 275);
-  --color-base-300: oklch(48% 0.026 275);
+  --color-base-100: oklch(21% 0.008 275);
+  --color-base-200: oklch(26% 0.01 275);
+  --color-base-300: oklch(32% 0.013 275);
   --color-base-content: oklch(97% 0.008 275);
 
   /* Brighter primary so it reads on the lighter bases */
-  --color-primary: oklch(62% 0.20 285);
-  --color-primary-content: oklch(98% 0.01 275);
+  --color-primary: oklch(76% 0.14 280);
+  --color-primary-content: oklch(18% 0.015 275);
 
   --color-secondary: oklch(68% 0.16 250);
   --color-secondary-content: oklch(22% 0.02 275);
@@ -55,9 +55,6 @@
   --anim-ease-out: cubic-bezier(0.33, 1, 0.68, 1);
   --anim-ease-in: ease-in;
 
-  -webkit-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
 
   --glass-bg-light: color-mix(in oklab, var(--color-base-100) 5%, transparent);
   --glass-bg-medium: color-mix(
@@ -101,7 +98,7 @@
   --glass-border: var(--glass-border-light);
   --glass-blur: var(--glass-blur-medium);
 
-  --sidebar-w: 72px;
+  --sidebar-w: 224px;
   --z-base: 1;
   --z-dropdown: 10;
   --z-sticky: 20;
@@ -198,13 +195,13 @@
   transition-duration: var(--press-duration-in);
 }
 
-/* Touch: even slower, softer press — premium over snappy */
+/* Immediate touch feedback with a short settling transition. */
 @media (hover: none) {
   :root {
     --press-scale: 0.975;
     --press-scale-card: 0.96;
-    --press-duration: 0.4s;
-    --press-duration-in: 0.32s;
+    --press-duration: 0.2s;
+    --press-duration-in: 0.09s;
   }
 }
 
@@ -380,124 +377,14 @@
   }
 }
 
-.route-transition-wrap {
-  view-transition-name: page;
-  /* Avoid clipping `position: fixed` descendants during long-page scrolls */
-  contain: none;
+/* Native tab changes keep controls stationary and avoid full-page snapshots. */
+.route-container > :not(router-outlet) {
+  display: block;
+  animation: page-reveal 180ms ease-out;
 }
-
-/* Keep chrome out of the page snapshot so it never fades/slides with routes. */
-.nav-mobile {
-  view-transition-name: app-nav-mobile;
-}
-
-.nav-desktop {
-  view-transition-name: app-nav-desktop;
-}
-
-.mini-player-container {
-  view-transition-name: app-mini-player;
-}
-
-::view-transition-group(app-nav-mobile),
-::view-transition-old(app-nav-mobile),
-::view-transition-new(app-nav-mobile),
-::view-transition-group(app-nav-desktop),
-::view-transition-old(app-nav-desktop),
-::view-transition-new(app-nav-desktop),
-::view-transition-group(app-mini-player),
-::view-transition-old(app-mini-player),
-::view-transition-new(app-mini-player) {
-  animation: none !important;
-}
-
-/* Root resize mid-transition was dragging chrome a few px. */
-::view-transition-group(root) {
-  animation: none;
-}
-
-@keyframes page-slide-out {
-  to {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-}
-
-@keyframes page-slide-in {
-  from {
-    transform: translateX(100%);
-    opacity: 0.95;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes page-slide-out-desktop {
-  to {
-    transform: translateY(-100%);
-    opacity: 0.9;
-  }
-}
-
-@keyframes page-slide-in-desktop {
-  from {
-    transform: translateY(100%);
-    opacity: 0.9;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes page-slide-out-back-desktop {
-  to {
-    transform: translateY(100%);
-    opacity: 0.9;
-  }
-}
-
-@keyframes page-slide-in-back-desktop {
-  from {
-    transform: translateY(-100%);
-    opacity: 0.9;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-::view-transition-old(page) {
-  animation: page-slide-out var(--page-transition-duration) var(--page-transition-ease) forwards;
-  z-index: 0;
-}
-
-::view-transition-new(page) {
-  animation: page-slide-in var(--page-transition-duration) var(--page-transition-ease) forwards;
-  z-index: 1;
-}
-
-@media (min-width: 1024px) {
-  :root {
-    --page-transition-duration: 0.24s;
-  }
-  ::view-transition-old(page) {
-    animation: page-slide-out-desktop var(--page-transition-duration) var(--page-transition-ease) forwards;
-    z-index: 0;
-  }
-  ::view-transition-new(page) {
-    animation: page-slide-in-desktop var(--page-transition-duration) var(--page-transition-ease) forwards;
-    z-index: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --page-transition-duration: 0.12s;
-  }
+@keyframes page-reveal {
+  from { opacity: .6; }
+  to { opacity: 1; }
 }
 
 .glass-light {
@@ -545,36 +432,7 @@
   }
 }
 
-.bg-app-gradient {
-  background-color: var(--color-base-100);
-  background-image:
-    radial-gradient(
-      circle at 8% 15%,
-      color-mix(in oklab, var(--color-primary) 14%, transparent) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 92% 85%,
-      color-mix(in oklab, var(--color-accent) 10%, transparent) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 85% 12%,
-      color-mix(in oklab, var(--color-secondary) 8%, transparent) 0%,
-      transparent 42%
-    ),
-    radial-gradient(
-      circle at 15% 88%,
-      color-mix(in oklab, var(--color-info) 6%, transparent) 0%,
-      transparent 42%
-    ),
-    radial-gradient(
-      circle at 50% 50%,
-      color-mix(in oklab, var(--color-base-200) 35%, transparent) 0%,
-      transparent 100%
-    );
-  background-attachment: fixed;
-}
+.bg-app-gradient { background: var(--color-base-100); }
 
 .glass-suggestions {
   background: color-mix(in oklab, var(--color-base-200) 78%, transparent);
@@ -610,8 +468,7 @@
   border-radius: var(--radius-2xl);
   border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
   overflow: hidden;
-  backdrop-filter: blur(20px) saturate(1.3);
-  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+
   box-shadow: none;
   transition: background-color 0.2s var(--anim-ease-smooth);
 }
@@ -656,7 +513,7 @@ html {
   padding: 0;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   letter-spacing: -0.011em;
   min-height: 100%;
@@ -675,33 +532,7 @@ body {
   overscroll-behavior-y: none;
   overscroll-behavior-x: none;
   background-color: var(--color-base-100);
-  background-image:
-    radial-gradient(
-      circle at 8% 15%,
-      color-mix(in oklab, var(--color-primary) 14%, transparent) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 92% 85%,
-      color-mix(in oklab, var(--color-accent) 10%, transparent) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 85% 12%,
-      color-mix(in oklab, var(--color-secondary) 8%, transparent) 0%,
-      transparent 42%
-    ),
-    radial-gradient(
-      circle at 15% 88%,
-      color-mix(in oklab, var(--color-info) 6%, transparent) 0%,
-      transparent 42%
-    ),
-    radial-gradient(
-      circle at 50% 50%,
-      color-mix(in oklab, var(--color-base-200) 35%, transparent) 0%,
-      transparent 100%
-    );
-  background-attachment: fixed;
+
 }
 
 ::-webkit-scrollbar {
@@ -1416,13 +1247,11 @@ body {
 /* Enter: opacity only — filled translate blocks mobile press `scale` on WebKit. */
 .explore-shelf-in {
   animation: explore-shelf-in var(--anim-duration-slow) var(--anim-ease-ios) both;
-  animation-delay: calc(min(var(--i, 0), 8) * 45ms);
+  animation-delay: 0ms;
 }
 .explore-card-in {
   animation: explore-card-in var(--anim-duration-fast) var(--anim-ease-ios) both;
-  animation-delay: calc(
-    min(var(--i, 0), 8) * 40ms + min(var(--c, 0), 6) * 24ms
-  );
+  animation-delay: calc(min(var(--c, 0), 4) * 16ms);
 }
 @keyframes explore-shelf-in {
   from {
@@ -1586,7 +1415,7 @@ body {
   gap: 0.65rem;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  scroll-snap-type: x mandatory;
+  scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   padding: 0.1rem 0.25rem 0.35rem; /* same inset as titles */
   scrollbar-width: none;
@@ -1606,7 +1435,7 @@ body {
 .explore-card {
   --press-scale: var(--press-scale-card);
   flex: 0 0 auto;
-  width: 7.5rem;
+  width: 9.5rem;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
@@ -1633,7 +1462,7 @@ body {
 }
 @media (min-width: 640px) {
   .explore-card {
-    width: 8.75rem;
+    width: 11rem;
   }
 }
 .explore-card--ghost {
@@ -1678,6 +1507,59 @@ body {
 }
 .explore-card-artist {
   margin-top: 0.15rem;
-  font-size: 0.6875rem;
-  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  font-size: 0.75rem;
+  color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+}
+
+/* Content stays crisp; translucent material is reserved for floating controls. */
+.page-heading h1, .discovery-heading {
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  font-weight: 750;
+  letter-spacing: -.045em;
+  line-height: 1.12;
+  margin: 5px 0 0;
+}
+.page-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .16em; color: var(--color-primary); }
+.explore { display: flex; flex-direction: column; gap: 28px; }
+.explore > * { margin-block: 0; }
+.explore-refresh { width: 44px; height: 44px; border-radius: 50%; }
+.explore-shelf-radio { min-height: 44px; border-radius: 22px; }
+.explore-shelf { gap: 14px; }
+.explore-title { font-size: 1.35rem; letter-spacing: -.035em; }
+.explore-kicker { margin-bottom: 5px; color: color-mix(in oklab, var(--color-base-content) 60%, transparent); }
+.explore-nudge { display: grid; grid-template-columns: 1fr auto; column-gap: 16px; background: var(--color-base-200); border-color: #ffffff08; }
+.explore-nudge-body { grid-column: 1; line-height: 1.5; }
+.explore-nudge-cta { grid-column: 2; grid-row: 1 / 3; align-self: center; margin: 0; min-height: 44px; }
+.discovery-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 38%);
+  min-height: 230px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(120deg, color-mix(in oklab, var(--color-primary) 13%, var(--color-base-200)), var(--color-base-200));
+  border: 1px solid #ffffff0a;
+}
+.discovery-feature-copy { padding: clamp(24px, 4vw, 40px); align-self: center; min-width: 0; }
+.discovery-feature h2 { font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 700; line-height: 1.12; letter-spacing: -.04em; margin: 16px 0 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.discovery-feature p { color: color-mix(in oklab, var(--color-base-content) 65%, transparent); font-size: 15px; }
+.discovery-feature img { width: 100%; height: 100%; max-height: 300px; object-fit: cover; }
+.discovery-play, .native-retry { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 20px; border-radius: 24px; background: var(--color-primary); color: var(--color-primary-content); font-size: 13px; font-weight: 650; margin-top: 24px; }
+.search-progress, .search-notice { display: flex; align-items: center; gap: 10px; min-height: 28px; font-size: 13px; color: color-mix(in oklab, var(--color-base-content) 70%, transparent); }
+.search-notice { padding: 12px 16px; border-radius: 16px; background: var(--color-base-200); }
+.search-notice button { color: var(--color-primary); min-height: 44px; padding: 0 8px; }
+:where(button, a, input, [tabindex]):focus-visible { outline: 2px solid var(--color-primary); outline-offset: 4px; }
+@media (max-width: 639px) {
+  .explore { margin-inline: 0; gap: 24px; }
+  .discovery-feature { grid-template-columns: minmax(0, 1fr) 38%; min-height: 210px; border-radius: 20px; }
+  .discovery-feature-copy { padding: 20px; }
+  .discovery-feature h2 { font-size: 24px; }
+  .discovery-play { margin-top: 18px; padding-inline: 16px; }
+  .explore-rail { margin-inline: -16px; padding-inline: 16px; }
+}
+@media (prefers-contrast: more) {
+  :root { --color-primary: oklch(85% .12 280); }
+  .explore-card-artist, .explore-kicker, .discovery-feature p { color: var(--color-base-content); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }

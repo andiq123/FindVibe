@@ -94,7 +94,12 @@ func (sh *SearchHandler) streamSearch(c fiber.Ctx, query string, page int) error
 	c.Set("Connection", "keep-alive")
 	c.Set("X-Accel-Buffering", "no")
 
+	// Fiber recycles its context and query buffer after the handler returns.
+	parent := context.WithoutCancel(c.Context())
+	query = strings.Clone(query)
 	return c.SendStreamWriter(func(w *bufio.Writer) {
+		ctx, cancel := context.WithTimeout(parent, 30*time.Second)
+		defer cancel()
 		enc := json.NewEncoder(w)
 		write := func(ev searchStreamEvent) bool {
 			if err := enc.Encode(ev); err != nil {
@@ -129,7 +134,7 @@ func (sh *SearchHandler) streamSearch(c fiber.Ctx, query string, page int) error
 			return nil
 		}
 
-		resp, err := sh.searchService.SearchWithProgress(c.Context(), query, page, onMeta, onSong)
+		resp, err := sh.searchService.SearchWithProgress(ctx, query, page, onMeta, onSong)
 		if err != nil && streamed == 0 {
 			_ = write(searchStreamEvent{Type: "error", Error: "Couldn't search"})
 			return

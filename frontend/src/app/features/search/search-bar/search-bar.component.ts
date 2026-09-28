@@ -21,7 +21,7 @@ import { SearchService } from "../services/search.service";
 import { SearchStatus } from "../../../core/models/song.model";
 import {
   Subject,
-  debounceTime,
+  timer,
   distinctUntilChanged,
   switchMap,
   of,
@@ -39,6 +39,7 @@ export class SearchBarComponent implements OnDestroy {
   query = input("");
   searchTerm = signal("");
   isFocused = signal(false);
+  activeSuggestion = signal(-1);
   private searchSubject = new Subject<string>();
   private searchService = inject(SearchService);
   private router = inject(Router);
@@ -77,7 +78,6 @@ export class SearchBarComponent implements OnDestroy {
 
     this.searchSubject
       .pipe(
-        debounceTime(280),
         distinctUntilChanged(),
         switchMap((term) => {
           const q = term.trim();
@@ -85,7 +85,7 @@ export class SearchBarComponent implements OnDestroy {
             this.searchService.resetSuggestions();
             return of([]);
           }
-          return this.searchService.getSuggestions(q);
+          return timer(180).pipe(switchMap(() => this.searchService.getSuggestions(q)));
         }),
         takeUntilDestroyed(),
       )
@@ -105,9 +105,29 @@ export class SearchBarComponent implements OnDestroy {
     await this.submit();
   }
 
+  onSearchKeydown(event: KeyboardEvent): void {
+    const count = this.suggestions().length;
+    if (event.key === "Escape") {
+      this.dismissSuggestions();
+      event.preventDefault();
+    } else if ((event.key === "ArrowDown" || event.key === "ArrowUp") && count) {
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      this.activeSuggestion.update((index) => (index + direction + count) % count);
+    } else if (event.key === "Enter" && this.activeSuggestion() >= 0) {
+      const suggestion = this.suggestions()[this.activeSuggestion()];
+      if (suggestion) {
+        event.preventDefault();
+        void this.searchBySuggestion(suggestion);
+      }
+    }
+  }
+
   onInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.searchTerm.set(value);
+    this.activeSuggestion.set(-1);
+    this.searchService.resetSuggestions();
     // Always push — empty string cancels in-flight suggest via switchMap.
     this.searchSubject.next(value);
   }
@@ -146,6 +166,7 @@ export class SearchBarComponent implements OnDestroy {
   }
 
   private dismissSuggestions(): void {
+    this.activeSuggestion.set(-1);
     this.searchSubject.next("");
     this.searchService.resetSuggestions();
   }

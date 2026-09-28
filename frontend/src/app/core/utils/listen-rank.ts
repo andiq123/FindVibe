@@ -1,6 +1,6 @@
 import { Song, songKey } from "../models/song.model";
 
-export type ListenStat = { ms: number; plays: number; lastAt: number };
+export interface ListenStat { ms: number; plays: number; lastAt: number }
 export type ListenStats = Record<string, ListenStat>;
 
 const DAY_MS = 86_400_000;

@@ -1,62 +1,21 @@
-<nav class="nav-desktop fixed left-0 top-0 bottom-0 w-[72px] hidden lg:flex flex-col items-center py-5 border-r border-base-content/[0.06] z-[var(--z-navigation)] bg-base-100">
-  <div class="mb-4 flex items-center justify-center" aria-label="FindVibe">
-    <img
-      src="icons/icon.svg"
-      alt=""
-      width="36"
-      height="36"
-      class="w-9 h-9 rounded-[0.65rem] shadow-sm shadow-black/20"
-    />
-  </div>
-  @for (navItem of navList; track navItem.name) {
-    <a
-      [routerLink]="navItem.link"
-      routerLinkActive="active-tab"
-      class="nav-desktop-item flex flex-col items-center justify-center gap-2 w-full py-3 rounded-xl transition-all duration-200 min-h-[64px] cursor-pointer group"
-      tabindex="0"
-      [attr.aria-label]="'Navigate to ' + navItem.name"
-    >
-      <div class="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 group-[.active-tab]:bg-primary/20 group-hover:bg-base-content/[0.08]">
-        <fa-icon
-          [icon]="navItem.icon"
-          class="text-[1.25rem] text-base-content/45 transition-colors duration-200 group-[.active-tab]:text-primary group-hover:text-base-content/70"
-        />
-      </div>
-      <span class="text-[10px] font-medium tracking-wide text-base-content/40 transition-colors duration-200 group-[.active-tab]:text-primary group-hover:text-base-content/60">{{ navItem.name }}</span>
+<nav class="nav-desktop" aria-label="Main navigation">
+  <a class="nav-brand" routerLink="/explore" aria-label="FindVibe home">
+    <img src="icons/icon.svg" alt="" width="38" height="38" />
+    <span>FindVibe<small>Your music, everywhere.</small></span>
+  </a>
+  <p class="nav-caption">LIBRARY</p>
+  @for (item of navList; track item.link) {
+    <a [routerLink]="item.link" routerLinkActive="active-tab" ariaCurrentWhenActive="page" class="nav-desktop-item">
+      <fa-icon [icon]="item.icon" /> <span>{{ item.name }}</span>
+    </a>
+  }
+  <div class="nav-footer">A little more discovery.<br />A lot more you.</div>
+</nav>
+<nav class="nav-mobile" aria-label="Main navigation">
+  @for (item of navList; track item.link) {
+    <a [routerLink]="item.link" routerLinkActive="active-tab" ariaCurrentWhenActive="page" class="nav-mobile-item">
+      <fa-icon [icon]="item.icon" />
+      <span>{{ item.name }}</span>
     </a>
   }
 </nav>
-<ul
-  class="nav-mobile grid grid-cols-4 fixed bottom-0 left-1/2 -translate-x-1/2 max-w-[600px] w-full bg-base-100 rounded-t-[1.75rem] border-t border-base-content/12 pt-2 px-3 gap-0.5 lg:hidden"
-  style="
-    padding-bottom: max(0.5rem, var(--safe-bottom));
-    padding-left: max(0.75rem, var(--safe-left));
-    padding-right: max(0.75rem, var(--safe-right));
-    z-index: var(--z-navigation);
-  "
->
-  @for (navItem of navList; track navItem.name) {
-    <li
-      class="relative flex flex-col items-center justify-center cursor-pointer transition-[scale,colors] duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] group min-h-[52px] [--press-scale:0.97]"
-      [routerLink]="navItem.link"
-      routerLinkActive="active-tab"
-      tabindex="0"
-      role="button"
-      [attr.aria-label]="'Navigate to ' + navItem.name"
-    >
-      <div
-        class="relative flex items-center justify-center w-11 h-9 rounded-2xl transition-all duration-300 group-[.active-tab]:bg-primary/20"
-      >
-        <fa-icon
-          [icon]="navItem.icon"
-          class="text-[1.25rem] text-base-content/55 transition-all duration-300 group-[.active-tab]:text-primary relative z-10"
-        ></fa-icon>
-      </div>
-      <span
-        class="text-[10px] font-medium tracking-wide mt-0.5 text-base-content/50 transition-all duration-300 group-[.active-tab]:text-primary group-[.active-tab]:font-semibold"
-      >
-        {{ navItem.name }}
-      </span>
-    </li>
-  }
-</ul>

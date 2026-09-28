@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	catalogArtistLimit       = 6 // artist.search rows for discovery UI
-	catalogArtistTopN        = 3 // artists that expand into top tracks
-	catalogTracksPerArtist   = 2
+	catalogArtistLimit        = 6 // artist.search rows for discovery UI
+	catalogArtistTopN         = 3 // artists that expand into top tracks
+	catalogTracksPerArtist    = 2
 	catalogAlbumsForTopArtist = 8
 )
 
@@ -71,7 +71,21 @@ func (l *LastFMCatalog) Search(ctx context.Context, query string, page, limit in
 		limit = 20
 	}
 
+	// Independent catalog calls overlap; artist enrichment no longer serializes
+	// behind track.search before any playable result can be resolved.
+	var artists []CatalogArtist
+	var artistHits []CatalogHit
+	var artistWG sync.WaitGroup
+	if page == 1 {
+		artistWG.Add(1)
+		go func() {
+			defer artistWG.Done()
+			artists = l.artistMatches(ctx, query, catalogArtistLimit)
+			artistHits = l.artistTopHitsFrom(ctx, artists)
+		}()
+	}
 	tracks, pag, err := l.trackSearch(ctx, query, page, limit)
+	artistWG.Wait()
 	if err != nil {
 		return CatalogPage{}, err
 	}
@@ -84,11 +98,9 @@ func (l *LastFMCatalog) Search(ctx context.Context, query string, page, limit in
 		}
 	}
 
-	var artists []CatalogArtist
 	// Artist matches only on page 1 — keeps pagination honest to track.search pages.
 	if page == 1 {
-		artists = l.artistMatches(ctx, query, catalogArtistLimit)
-		for _, h := range l.artistTopHitsFrom(ctx, artists) {
+		for _, h := range artistHits {
 			k := SongKey(h.Artist, h.Title)
 			if k == "" {
 				continue

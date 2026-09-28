@@ -1,9 +1,14 @@
 import {
   Component,
+  effect,
+  computed,
+  signal,
   OnInit,
   inject,
   ChangeDetectionStrategy,
 } from "@angular/core";
+import { HttpClient } from "@angular/common/http";
+import { environment } from "../../../environments/environment";
 import { RouterLink } from "@angular/router";
 import { FaIconComponent } from "@fortawesome/angular-fontawesome";
 import { PageContentComponent } from "../../shared/components/page-content/page-content.component";
@@ -38,6 +43,12 @@ import {
 })
 export class ExplorePageComponent implements OnInit {
   readonly explore = inject(ExploreService);
+  private readonly http = inject(HttpClient);
+  readonly featuredImage = signal("");
+  readonly featuredSong = computed(() => {
+    const songs = this.explore.sections()[0]?.songs ?? [];
+    return songs.find((song) => song.image?.trim() && !song.image.includes("no_album_art")) ?? songs[0];
+  });
   readonly radio = inject(RadioService);
   private readonly player = inject(PlayerService);
   private readonly library = inject(LibraryService);
@@ -50,8 +61,29 @@ export class ExplorePageComponent implements OnInit {
   readonly faWaveSquare = faWaveSquare;
   readonly skeletons = [0, 1, 2];
 
+  constructor() {
+    effect((onCleanup) => {
+      const song = this.featuredSong();
+      this.featuredImage.set("");
+      if (!song) return;
+      // Enrich only the prominent cover; never delay discovery or fan out per card.
+      const sub = this.http.get<{ image?: string }>(`${environment.API_URL}/cover`, {
+        params: { q: `${song.artist} ${song.title}` },
+      }).subscribe({
+        next: (result) => this.featuredImage.set(result.image || ""),
+        error: () => { /* Retain provider art when enrichment is unavailable. */ },
+      });
+      onCleanup(() => sub.unsubscribe());
+    });
+  }
+
   ngOnInit(): void {
     void this.explore.load();
+  }
+
+  onCoverError(event: Event): void {
+    const image = event.target as HTMLImageElement;
+    if (!image.src.endsWith("/no_album_art.jpg")) image.src = "no_album_art.jpg";
   }
 
   onRefresh(): void {

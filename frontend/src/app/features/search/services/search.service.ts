@@ -9,6 +9,7 @@ import {
 } from "../../../core/models/song.model";
 import { environment } from "../../../../environments/environment";
 import { StorageService } from "../../../core/services/storage.service";
+import { readSearchStream } from "./search-stream";
 import { SettingsService } from "../../../core/services/settings.service";
 
 const BASE_API_URL = environment.API_URL;
@@ -34,6 +35,8 @@ export class SearchService {
   private readonly _suggestions = signal<string[]>([]);
   private readonly _suggestionsLoading = signal<boolean>(false);
   private suggestQuery = "";
+  private activeSearch?: AbortController;
+  readonly searchWarning = signal("");
   private readonly _lastSearchQuery = signal<string>("");
   private readonly _pagination = signal<PaginationInfo | null>(null);
   private readonly _currentPage = signal(1);
@@ -68,30 +71,69 @@ export class SearchService {
     ) {
       return of({ songs: this._songs(), pagination: this._pagination() });
     }
-    this._searchStatus.set(SearchStatus.Loading);
-    this._songs.set([]);
-    const q = encodeURIComponent(searchTerm);
-    const url =
-      page > 1
-        ? `${BASE_API_URL}/search?q=${q}&page=${page}`
-        : `${BASE_API_URL}/search?q=${q}`;
-    return this.httpClient.get<SearchResponse>(url).pipe(
-      tap((response) => {
-        this._songs.set(response.songs);
-        this._pagination.set(response.pagination ?? null);
-        this._currentPage.set(page);
-        this._searchStatus.set(SearchStatus.Finished);
-        this._lastSearchQuery.set(searchTerm);
-        this.saveState();
-      }),
-      catchError(() => {
-        this._lastSearchQuery.set(searchTerm);
-        this._currentPage.set(page);
-        this._pagination.set(null);
-        this._searchStatus.set(SearchStatus.Error);
-        return of({ songs: [], pagination: null });
-      }),
-    );
+    return new Observable<SearchResponse>((subscriber) => {
+      this.activeSearch?.abort();
+      const controller = new AbortController();
+      this.activeSearch = controller;
+      const timeout = setTimeout(() => controller.abort(new Error("Search timed out")), 30_000);
+      const isCurrent = () => this.activeSearch === controller && !subscriber.closed;
+      this._searchStatus.set(SearchStatus.Loading);
+      this._songs.set([]);
+      this._pagination.set(null);
+      this._lastSearchQuery.set(searchTerm);
+      this._currentPage.set(page);
+      this.searchWarning.set("");
+
+      const run = async () => {
+        let complete = false;
+        const links = new Set<string>();
+        try {
+          const params = new URLSearchParams({ q: searchTerm, page: String(page), stream: "1" });
+          const response = await fetch(`${BASE_API_URL}/search?${params}`, { signal: controller.signal });
+          for await (const event of readSearchStream(response)) {
+            if (!isCurrent()) return;
+            if (event.type === "meta" && event.pagination) this._pagination.set(event.pagination);
+            if (event.type === "song" && event.song && !links.has(event.song.link)) {
+              links.add(event.song.link);
+              this._songs.update((songs) => [...songs, event.song!]);
+            }
+            if (event.type === "error") {
+              if (event.error === "no songs found") { complete = true; break; }
+              throw new Error(event.error || "Search failed");
+            }
+            if (event.type === "done") { complete = true; break; }
+          }
+          if (!complete) throw new Error("Search interrupted");
+          if (!isCurrent()) return;
+          this._searchStatus.set(SearchStatus.Finished);
+          this.settingsService.setServerUp();
+          this.saveState();
+        } catch {
+          if (!isCurrent()) return;
+          if (this._songs().length) {
+            this.searchWarning.set("Some sources didn’t respond. You can play these results or retry.");
+            this._searchStatus.set(SearchStatus.Finished);
+          } else {
+            this._searchStatus.set(SearchStatus.Error);
+          }
+        } finally {
+          clearTimeout(timeout);
+        }
+        if (isCurrent()) {
+          subscriber.next({ songs: this._songs(), pagination: this._pagination() });
+          subscriber.complete();
+        }
+      };
+      void run().finally(() => subscriber.complete());
+      return () => {
+        clearTimeout(timeout);
+        controller.abort();
+        if (this.activeSearch === controller) {
+          this.activeSearch = undefined;
+          if (this._searchStatus() === SearchStatus.Loading) this._searchStatus.set(SearchStatus.None);
+        }
+      };
+    });
   }
 
   getSuggestions(term: string): Observable<string[]> {
@@ -131,6 +173,9 @@ export class SearchService {
   }
 
   resetSearch(): void {
+    this.activeSearch?.abort();
+    this.activeSearch = undefined;
+    this.searchWarning.set("");
     this._songs.set([]);
     this._searchStatus.set(SearchStatus.None);
     this.resetSuggestions();

@@ -11,10 +11,9 @@ interface StoredRoute {
 @Injectable()
 export class CustomReuseStrategy implements RouteReuseStrategy {
   private handlers = new Map<string, StoredRoute>();
+  // Search state lives in SearchService; retaining every query leaks live views.
   private routesToCache: string[] = [
     "library",
-    "songs",
-    "songs/:query",
     "recent",
   ];
   shouldDetach(route: ActivatedRouteSnapshot): boolean {

@@ -6,12 +6,12 @@ import { StorageService } from "./storage.service";
 
 const SESSION_KEY = "playerSession";
 
-type PlayerSession = {
+interface PlayerSession {
   songs: Song[];
   index: number;
   radio: boolean;
   t: number;
-};
+}
 
 @Injectable({
   providedIn: "root",
@@ -267,7 +267,8 @@ export class PlaylistService {
 
 function slimSong(s: Song): Song {
   if (!s.lyrics) return s;
-  const { lyrics: _drop, ...rest } = s;
+  const rest = { ...s };
+  delete rest.lyrics;
   return rest;
 }
 
