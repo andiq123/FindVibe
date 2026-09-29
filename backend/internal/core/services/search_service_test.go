@@ -105,7 +105,7 @@ func TestDirectSearchStreamsBeforeSlowProviderAndKeepsAlternates(t *testing.T) {
 		count++
 		return nil
 	})
-	if err != nil || count != 2 || len(resp.Songs) != 2 || !resp.Pagination.HasNextPage {
+	if err != nil || count != 2 || len(resp.Songs) != 1 || len(resp.Songs[0].Alternatives) != 1 || !resp.Pagination.HasNextPage {
 		t.Fatalf("bad response: %+v %v", resp, err)
 	}
 	if first >= 90*time.Millisecond {

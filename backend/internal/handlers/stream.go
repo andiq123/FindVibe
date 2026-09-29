@@ -62,6 +62,19 @@ func (h *RecommendHandler) GetStream(c fiber.Ctx) error {
 		defer recoveryCancel()
 		candidates, searchErr := h.search.Search(recoveryCtx, artist+" "+title, 1)
 		if searchErr == nil && candidates != nil {
+			// Search cards are deduplicated, but every alternate audio source stays available.
+			expanded := make([]domain.Song, 0, len(candidates.Songs)*2)
+			for _, candidate := range candidates.Songs {
+				expanded = append(expanded, candidate)
+				for _, alternate := range candidate.Alternatives {
+					copy := candidate
+					copy.Link = alternate.Link
+					copy.Provider = alternate.Provider
+					copy.Alternatives = nil
+					expanded = append(expanded, copy)
+				}
+			}
+			candidates.Songs = expanded
 			failedURL, _ := url.Parse(song.Link)
 			providerHost := func(link string) string {
 				u, _ := url.Parse(link)
@@ -183,6 +196,11 @@ func streamProxyAllowed(u *url.URL) bool {
 	if host == "" || u.User != nil || (u.Port() != "" && u.Port() != "443") {
 		return false
 	}
+	for _, source := range []string{"mp3.pm", "mp3mn.net", "musify.club", "sunproxy.net"} {
+		if host == source || strings.HasSuffix(host, "."+source) {
+			return true
+		}
+	}
 	allowedHost := host == "new.kachevo.org" || host == "eu.hitmoz.com"
 	// These are the providers' audio redirect hosts, not additional search sources.
 	for _, cdn := range []string{"deliciousbananas.com", "deliciouspeaches.com"} {
@@ -194,5 +212,14 @@ func streamProxyAllowed(u *url.URL) bool {
 func applyStreamUpstreamHeaders(req *http.Request, u *url.URL) {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
 	req.Header.Set("Accept", "*/*")
-	req.Header.Set("Referer", "https://"+u.Hostname()+"/")
+	host := u.Hostname()
+	switch {
+	case strings.HasSuffix(host, "mp3.pm"):
+		host = "mp3.pm"
+	case strings.HasSuffix(host, "sunproxy.net"), strings.HasSuffix(host, "mp3mn.net"):
+		host = "mp3mn.net"
+	case strings.HasSuffix(host, "musify.club"):
+		host = "musify.club"
+	}
+	req.Header.Set("Referer", "https://"+host+"/")
 }

@@ -3,6 +3,8 @@ import { PaginationInfo, Song } from "../../../core/models/song.model";
 export interface SearchEvent {
   type: "meta" | "song" | "done" | "error";
   song?: Song;
+  songs?: Song[];
+  key?: string;
   pagination?: PaginationInfo;
   error?: string;
 }

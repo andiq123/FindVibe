@@ -39,6 +39,9 @@ type sourceStatus struct {
 }
 
 var musicSources = []sourceSpec{
+	{Name: "Mp3pm", Host: "mp3.pm", URL: "https://mp3.pm/", Markers: [][]byte{[]byte(`data-sound-url`)}},
+	{Name: "Mp3mn", Host: "mp3mn.net", URL: "https://mp3mn.net/"},
+	{Name: "Musify", Host: "musify.club", URL: "https://musify.club/en/search?searchText=nero&type=song", Markers: [][]byte{[]byte(`tracklist__row`)}},
 	{Name: "MusicBoss", Host: "new.kachevo.org", URL: providers.MusicBossOrigin + "/search?q=cariceps", Markers: [][]byte{[]byte(`playlist-item-play`)}},
 	{Name: "Hitmos", Host: "eu.hitmoz.com", URL: providers.HitmosOrigin + "/search?q=cariceps", Markers: [][]byte{[]byte(`data-musmeta`)}},
 }

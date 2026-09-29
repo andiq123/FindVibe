@@ -315,6 +315,9 @@ func TestResolveRefreshBypassesCache(t *testing.T) {
 
 func TestStreamProxyAllowedHosts(t *testing.T) {
 	allow := []string{
+		"https://cs1.mp3.pm/listen/a.mp3",
+		"https://musify.club/track/pl/1/x.mp3",
+
 		"https://new.kachevo.org/get/music/a.mp3",
 		"https://eu.hitmoz.com/get/music/a.mp3",
 		"https://ds2.deliciousbananas.com/get/music/a.mp3",
@@ -329,8 +332,6 @@ func TestStreamProxyAllowedHosts(t *testing.T) {
 	deny := []string{
 		"http://cs1.mp3.pm/listen/a.mp3",
 		"https://evil.example/a.mp3",
-		"https://cs1.mp3.pm/listen/a.mp3",
-		"https://musify.club/track/pl/1/x.mp3",
 		"https://new.kachevo.org.evil.test/get/music/a.mp3",
 		"https://new.kachevo.org/admin",
 		"https://deliciousbananas.com.evil.test/get/music/a.mp3",

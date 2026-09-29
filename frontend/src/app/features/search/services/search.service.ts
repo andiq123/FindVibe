@@ -15,7 +15,7 @@ import { readSearchStream } from "./search-stream";
 import { SettingsService } from "../../../core/services/settings.service";
 
 const BASE_API_URL = environment.API_URL;
-const SEARCH_STORAGE_KEY = "search_state";
+const SEARCH_STORAGE_KEY = "search_state_v2";
 
 interface SearchState {
   songs: Song[];
@@ -99,15 +99,18 @@ export class SearchService {
           for await (const event of readSearchStream(response)) {
             if (!isCurrent()) return;
             if (event.type === "meta" && event.pagination) this._pagination.set(event.pagination);
-            if (event.type === "song" && event.song && !links.has(event.song.link)) {
-              links.add(event.song.link);
+            if (event.type === "song" && event.song && !links.has(event.key || event.song.link)) {
+              links.add(event.key || event.song.link);
               this._songs.update((songs) => [...songs, event.song!]);
             }
             if (event.type === "error") {
               if (event.error === "no songs found") { complete = true; break; }
               throw new Error(event.error || "Search failed");
             }
-            if (event.type === "done") { complete = true; break; }
+            if (event.type === "done") {
+              if (event.songs) this._songs.set(event.songs);
+              complete = true; break;
+            }
           }
           if (!complete) throw new Error("Search interrupted");
           if (!isCurrent()) return;

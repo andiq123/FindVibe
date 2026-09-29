@@ -32,6 +32,7 @@ func NewSearchHandler(
 }
 
 type searchStreamEvent struct {
+	Key        string                 `json:"key,omitempty"`
 	Type       string                 `json:"type"`
 	Artists    []domain.SearchArtist  `json:"artists,omitempty"`
 	Albums     []domain.ArtistAlbum   `json:"albums,omitempty"`
@@ -128,7 +129,7 @@ func (sh *SearchHandler) streamSearch(c fiber.Ctx, query string, page int) error
 				s.Image = ""
 			}
 			streamed++
-			if !write(searchStreamEvent{Type: "song", Song: &s}) {
+			if !write(searchStreamEvent{Type: "song", Song: &s, Key: services.RecordingKey(s)}) {
 				return context.Canceled
 			}
 			return nil
@@ -143,6 +144,13 @@ func (sh *SearchHandler) streamSearch(c fiber.Ctx, query string, page int) error
 			_ = write(searchStreamEvent{Type: "error", Error: "no songs found"})
 			return
 		}
-		_ = write(searchStreamEvent{Type: "done"})
+		if resp != nil {
+			for i := range resp.Songs {
+				if !services.HasRealCover(resp.Songs[i].Image) {
+					resp.Songs[i].Image = ""
+				}
+			}
+			_ = write(searchStreamEvent{Type: "done", Songs: resp.Songs})
+		}
 	})
 }

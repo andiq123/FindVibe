@@ -107,6 +107,7 @@ export class SearchBarComponent implements OnDestroy {
 
   onSearchKeydown(event: KeyboardEvent): void {
     const count = this.suggestions().length;
+    if (event.isComposing) return;
     if (event.key === "Escape") {
       this.dismissSuggestions();
       event.preventDefault();
@@ -149,6 +150,7 @@ export class SearchBarComponent implements OnDestroy {
   async submit(): Promise<void> {
     const term = this.searchTerm().trim();
     if (!term) return;
+    this.elementRef.nativeElement.querySelector("input")?.blur();
     this.dismissSuggestions();
     this.isFocused.set(false);
     if (this.query() !== term) {

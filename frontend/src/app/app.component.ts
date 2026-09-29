@@ -22,7 +22,6 @@ import { AppUpdateService } from "./core/services/app-update.service";
 import { PlayerService } from "./core/services/player.service";
 import { PlaylistService } from "./core/services/playlist.service";
 import { ToastService } from "./core/services/toast.service";
-import { KeyboardDismissComponent } from "./shared/keyboard-dismiss/keyboard-dismiss.component";
 
 /** Enables :active styles on iOS — no-op handler, passive. */
 function noopTouch(): void { /* Passive listener enables iOS :active feedback. */ }
@@ -38,7 +37,6 @@ function noopTouch(): void { /* Passive listener enables iOS :active feedback. *
     UpdateOverlayComponent,
     ConnectionStatusComponent,
     GlobalModalComponent,
-    KeyboardDismissComponent,
   ],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.scss",

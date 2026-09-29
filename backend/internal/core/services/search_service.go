@@ -169,6 +169,7 @@ func (ss *SearchService) searchUncached(
 	}
 	pagination := &domain.PaginationInfo{CurrentPage: page, HasPrevPage: page > 1}
 	resp := domain.NewSearchResponse([]domain.Song{}, pagination)
+	defer func() { resp.Songs = rankSearchResults(text, resp.Songs, ss.config.MaxResults) }()
 	seen := map[string]bool{}
 	successes := 0
 	for range ss.providers {
@@ -356,6 +357,9 @@ func cloneSearchResponse(r *domain.SearchResponse) *domain.SearchResponse {
 		return nil
 	}
 	songs := append([]domain.Song(nil), r.Songs...)
+	for i := range songs {
+		songs[i].Alternatives = append([]domain.AudioSource(nil), songs[i].Alternatives...)
+	}
 	artists := append([]domain.SearchArtist(nil), r.Artists...)
 	albums := append([]domain.ArtistAlbum(nil), r.Albums...)
 	var pag *domain.PaginationInfo

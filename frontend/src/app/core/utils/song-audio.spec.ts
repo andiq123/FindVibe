@@ -4,7 +4,7 @@ import { Song } from "../models/song.model";
 describe("song audio fallback", () => {
   const song: Song = { id: "1", artist: "A & B", title: "A + song", image: "", link: "https://new.kachevo.org/get/music/song.mp3" };
   it("routes paused providers through active-source recovery", async () => {
-    const old = { ...song, link: "https://mp3.pm/song.mp3" };
+    const old = { ...song, link: "https://retired.example/song.mp3" };
     expect(directAudioEnabled(old)).toBeFalse();
     const audio = new Response("audio", { headers: { "Content-Type": "audio/mpeg" } });
     const fetchSpy = spyOn(globalThis, "fetch").and.resolveTo(audio);

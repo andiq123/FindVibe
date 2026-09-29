@@ -58,9 +58,8 @@ and its existing linked PostgreSQL database and service environment variables.
 
 ### Active music sources
 
-MusicBoss (`new.kachevo.org`) and Hitmos (`eu.hitmoz.com`) are the only active
-search, recommendation-resolution, and stream sources. The Mp3pm, Mp3mn, and
-Musify adapters remain in the codebase but are not registered. Saved tracks from
-paused providers resolve through the active sources when played online; existing
-offline downloads remain available. Both new sources are searched concurrently
-with the existing bounded cache and cross-source playback recovery.
+MusicBoss, Hitmos, Musify, Mp3mn, and Mp3pm are active. Search queries them
+concurrently, ranks artist/title matches, and groups duplicate recordings into
+one result while retaining alternate audio sources for playback recovery.
+Named versions remain separate. Results use a bounded two-minute cache; provider
+ordering is a reliability preference, not a global popularity chart.

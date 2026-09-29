@@ -45,9 +45,13 @@ func InitializeHandlers(db *gorm.DB, cfg *config.AppConfig) Handlers {
 		cfg.HTTP.IdleTimeout,
 		utils.ParseProxyList(cfg.HTTP.ProviderProxies),
 	)
-	// Legacy adapters remain available in providers, but are intentionally paused.
+	// Prefer the newer sources while retaining the full catalog.
 	musicboss := providers.NewMusicBossProvider(scrape.Client)
 	hitmos := providers.NewHitmosProvider(scrape.Client)
+	mp3pm := providers.NewMp3pmProvider(scrape.Client).UseRotator(scrape)
+	mp3mn := providers.NewMp3mnProvider(scrape.Client)
+	mp3mn.WithRotator(scrape)
+	musify := providers.NewMusifyProvider(scrape.Client).UseRotator(scrape)
 
 	searchConfig := domain.DefaultSearchConfig()
 	searchConfig.MaxResults = cfg.Search.MaxResults
@@ -55,7 +59,7 @@ func InitializeHandlers(db *gorm.DB, cfg *config.AppConfig) Handlers {
 	lastfmKey := os.Getenv("LASTFM_API_KEY")
 	covers := services.NewCoverService(httpClient, lastfmKey)
 	searchSvc := services.NewSearchService(
-		[]ports.IMusicProvider{musicboss, hitmos},
+		[]ports.IMusicProvider{musicboss, hitmos, musify, mp3mn, mp3pm},
 		searchConfig,
 		cfg.Search.Timeout,
 	)

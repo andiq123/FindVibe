@@ -105,9 +105,8 @@ func TestStreamRecoversThroughAnotherProvider(t *testing.T) {
 		return &http.Response{StatusCode: status, Header: http.Header{"Content-Type": {ct}}, Body: io.NopCloser(strings.NewReader(body)), ContentLength: int64(len(body))}, nil
 	})}
 	search := stubSearch{hits: map[string][]domain.Song{"adele hello": {
-		{Artist: "Adele", Title: "Hello", Link: dead},
+		{Artist: "Adele", Title: "Hello", Link: dead, Alternatives: []domain.AudioSource{{Link: good, Provider: "Hitmos"}}},
 		{Artist: "Other", Title: "Wrong", Link: "https://eu.hitmoz.com/get/music/wrong.mp3"},
-		{Artist: "Adele", Title: "Hello", Link: good},
 	}}}
 	h := NewRecommendHandlerUpstream(client, client, "", search, nil)
 	app := fiber.New()

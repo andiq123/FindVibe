@@ -2,13 +2,19 @@ package domain
 
 import "github.com/google/uuid"
 
-type Song struct {
-	Id       string `json:"id"`
-	Title    string `json:"title"`
-	Artist   string `json:"artist"`
-	Image    string `json:"image"`
+type AudioSource struct {
 	Link     string `json:"link"`
-	Provider string `json:"provider,omitempty"`
+	Provider string `json:"provider"`
+}
+
+type Song struct {
+	Alternatives []AudioSource `json:"alternatives,omitempty"`
+	Id           string        `json:"id"`
+	Title        string        `json:"title"`
+	Artist       string        `json:"artist"`
+	Image        string        `json:"image"`
+	Link         string        `json:"link"`
+	Provider     string        `json:"provider,omitempty"`
 }
 
 func NewSong(title string, artist string, image string, link string) *Song {

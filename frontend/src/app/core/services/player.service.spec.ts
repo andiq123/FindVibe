@@ -56,7 +56,7 @@ describe("PlayerService recovery", () => {
     expect(player.playError()).toContain("Couldn't play");
   });
   it("resolves paused-provider songs without contacting their old host", async () => {
-    const old = { ...song, link: "https://mp3.pm/song.mp3" };
+    const old = { ...song, link: "https://retired.example/song.mp3" };
     await player.setSong(old); TestBed.tick();
     expect(playSource).toHaveBeenCalledOnceWith(streamUrl(old));
     status.set(PlayerStatus.Error); TestBed.tick();

@@ -29,7 +29,7 @@ func (ss *SuggestionsService) GetSuggestions(ctx context.Context, query, hl, gl 
 	gl = strings.ToUpper(localeCode(gl, "US"))
 
 	apiURL := fmt.Sprintf(
-		"https://suggestqueries.google.com/complete/search?client=firefox&hl=%s&gl=%s&q=%s",
+		"https://suggestqueries.google.com/complete/search?client=firefox&ie=utf-8&oe=utf-8&ds=yt&hl=%s&gl=%s&q=%s",
 		url.QueryEscape(hl),
 		url.QueryEscape(gl),
 		url.QueryEscape(query),
@@ -50,19 +50,22 @@ func (ss *SuggestionsService) GetSuggestions(ctx context.Context, query, hl, gl 
 		return nil, fmt.Errorf("suggestions: unexpected status code: %d", resp.StatusCode)
 	}
 
-	payload, err := io.ReadAll(resp.Body)
+	payload, err := io.ReadAll(io.LimitReader(resp.Body, 256<<10))
 	if err != nil {
 		return nil, fmt.Errorf("suggestions: failed to read body: %w", err)
 	}
 
 	start := bytes.IndexByte(payload, '[')
 	end := bytes.LastIndexByte(payload, ']')
-	if start == -1 || end == -1 {
+	if start == -1 || end < start {
 		return nil, fmt.Errorf("suggestions: invalid format in response")
 	}
 
-	// Google emits ISO-8859-1; encoding/json expects UTF-8.
-	raw := latin1ToUTF8(payload[start : end+1])
+	// Preserve UTF-8 (including Cyrillic); tolerate legacy Latin-1 feeds.
+	raw := payload[start : end+1]
+	if !utf8.Valid(raw) {
+		raw = latin1ToUTF8(raw)
+	}
 
 	var data []any
 	if err := json.Unmarshal(raw, &data); err != nil {

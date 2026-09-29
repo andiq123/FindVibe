@@ -11,14 +11,14 @@ export function streamUrl(song: Song): string {
   return `${environment.API_URL}/stream?${params}`;
 }
 
-/** Saved tracks from paused providers resolve through the active backend sources. */
+/** Allow direct audio only from the configured music sources. */
 export function directAudioEnabled(song: Song): boolean {
   try {
     const url = new URL(upgradeToHttps(song.link));
     return url.protocol === "https:" && !url.username && !url.password &&
       (!url.port || url.port === "443") &&
-      ["new.kachevo.org", "eu.hitmoz.com"].includes(url.hostname) &&
-      url.pathname.startsWith("/get/music/");
+      ((["new.kachevo.org", "eu.hitmoz.com"].includes(url.hostname) && url.pathname.startsWith("/get/music/")) ||
+      ["mp3.pm", "mp3mn.net", "musify.club", "sunproxy.net"].some(host => url.hostname === host || url.hostname.endsWith("." + host)));
   } catch { return false; }
 }
 
